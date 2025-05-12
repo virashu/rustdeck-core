@@ -23,11 +23,15 @@ macro_rules! define_plugin {
         name: $name:literal,
         description: $description:literal,
         id: $id:literal,
+        actions: $actions:expr,
+        variables: $variables:expr,
         data: $data:expr
     ) => {
         const __NAME: &str = concat!($name, "\0");
         const __DESCRIPTION: &str = concat!($description, "\0");
         const __ID: &str = concat!($id, "\0");
+        const __ACTIONS: &[&str] = &$actions;
+        const __VARIABLES: &[&str] = &$variables;
 
         #[no_mangle]
         pub extern "C" fn get_name() -> *const ::std::os::raw::c_char {
