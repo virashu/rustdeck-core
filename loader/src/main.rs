@@ -1,4 +1,3 @@
-use std::error::Error;
 use std::fs;
 use std::path::Path;
 
@@ -7,7 +6,7 @@ use plugin_wrapper::Plugin;
 mod error;
 mod plugin_wrapper;
 
-fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, Box<dyn Error>> {
+fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, Box<dyn std::error::Error>> {
     let mut plugins = Vec::new();
 
     let dir = fs::read_dir(path)?;
@@ -34,13 +33,14 @@ fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, Box<dyn Error>> {
     Ok(plugins)
 }
 
-fn main() {
+fn main() -> Result<(), Box<dyn std::error::Error>> {
     let plugins = load_plugins_at(Path::new("./plugins")).unwrap();
 
     for (i, plugin) in plugins.iter().enumerate() {
-        print!("{}) ", i + 1);
-        println!("{}", plugin.get_name());
+        println!("{}) {}", i + 1, plugin.name);
     }
 
     println!("OK");
+
+    Ok(())
 }
