@@ -2,14 +2,13 @@ use std::error::Error;
 use std::fs;
 use std::path::Path;
 
-use common::PluginTrait;
-use plugin_wrapper::RsPluginWrapper;
+use plugin_wrapper::Plugin;
 
 mod error;
 mod plugin_wrapper;
 
-fn load_plugins_at(path: &Path) -> Result<Vec<Box<dyn PluginTrait>>, Box<dyn Error>> {
-    let mut plugins: Vec<Box<dyn PluginTrait>> = Vec::new();
+fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, Box<dyn Error>> {
+    let mut plugins = Vec::new();
 
     let dir = fs::read_dir(path)?;
     let entries = dir.flatten();
@@ -21,9 +20,9 @@ fn load_plugins_at(path: &Path) -> Result<Vec<Box<dyn PluginTrait>>, Box<dyn Err
         .collect::<Vec<_>>();
 
     for path in libs {
-        match RsPluginWrapper::try_load(path) {
+        match Plugin::try_load(path) {
             Ok(plugin) => {
-                plugins.push(Box::new(plugin));
+                plugins.push(plugin);
             }
             Err(e) => {
                 println!("Error loading {:?}:\n -> {}", path, e);

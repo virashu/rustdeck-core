@@ -1,5 +1,3 @@
-use std::fmt::write;
-
 #[allow(dead_code, reason = "WIP")]
 enum ErrorKind {
     NotALibrary = 193,

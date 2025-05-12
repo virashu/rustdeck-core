@@ -7,42 +7,14 @@ pub mod interface {
     pub const PLUGIN_IDENT: &[u8] = b"PLUGIN";
 }
 
-pub trait PluginTrait {
-    fn get_name(&self) -> String;
-    fn get_description(&self) -> String;
-    fn get_id(&self) -> String;
-
-    fn get_variables(&self) -> String;
-    fn get_actions(&self) -> String;
-
-    fn execute_action(&self, id: String);
-
-    fn update(&mut self);
-}
-
-pub trait RsPluginTrait {
-    fn get_name(&self) -> *mut c_char;
-    fn get_description(&self) -> *mut c_char;
-    fn get_id(&self) -> *mut c_char;
-
-    fn get_variables(&self) -> *mut c_char;
-    fn get_actions(&self) -> *mut c_char;
-
-    fn execute_action(&self, id: *mut c_char);
-
-    fn update(&mut self);
-}
-
-#[rustfmt::skip]
 #[repr(C)]
 pub struct CPlugin {
-    pub new             : unsafe extern "C" fn() -> *mut c_void,
+    pub new: unsafe extern "C" fn() -> *mut c_void,
 
     // pub get_variables   : unsafe extern "C" fn(state: *mut c_void) -> *mut c_char,
     // pub get_actions     : unsafe extern "C" fn(state: *mut c_void) -> *mut c_char,
-
-    pub execute_action  : unsafe extern "C" fn(state: *mut c_void, id: *mut c_char),
-    pub update          : unsafe extern "C" fn(state: *mut c_void),
+    pub execute_action: unsafe extern "C" fn(state: *mut c_void, id: *const c_char),
+    pub update: unsafe extern "C" fn(state: *mut c_void),
 }
 
 #[macro_export]

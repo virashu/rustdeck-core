@@ -77,6 +77,6 @@ unsafe extern "C" fn new() -> *mut c_void {
     &mut (**state) as *mut PluginState as _
 }
 
-unsafe extern "C" fn execute_action(state: *mut c_void, id: *mut c_char) {}
+unsafe extern "C" fn execute_action(state: *mut c_void, id: *const c_char) {}
 
 unsafe extern "C" fn update(state: *mut c_void) {}
