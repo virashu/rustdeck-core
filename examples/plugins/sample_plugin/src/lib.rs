@@ -1,6 +1,7 @@
 use std::{
     ffi::{c_char, c_void, CStr, CString},
-    mem::ManuallyDrop, ptr::null_mut,
+    mem::ManuallyDrop,
+    ptr::null_mut,
 };
 
 use rustdeck_common::{define_plugin, CPlugin};

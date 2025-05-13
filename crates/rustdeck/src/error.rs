@@ -4,7 +4,7 @@ enum ErrorKind {
 }
 
 pub fn report_libloading_error(e: &libloading::Error) {
-    println!("Libloading error!");
+    tracing::error!("Libloading error!");
 
     match e {
         libloading::Error::LoadLibraryExW { source } => {
@@ -26,15 +26,15 @@ pub fn report_libloading_error(e: &libloading::Error) {
 
             match err_code {
                 193 => {
-                    println!("Not a library");
+                    tracing::error!("Not a library");
                 }
                 _ => {
-                    println!("{:?}", source);
+                    tracing::error!("{:?}", source);
                 }
             }
         }
         _ => {
-            println!("{:?}", e);
+            tracing::error!("{:?}", e);
         }
     }
 }

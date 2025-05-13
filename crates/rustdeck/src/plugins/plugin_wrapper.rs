@@ -1,4 +1,3 @@
-
 use libloading::{Library, Symbol};
 use std::{
     error::Error,
@@ -96,13 +95,23 @@ impl Plugin {
     }
 
     pub fn run_action(&self, id: String) {
-        unsafe { (self.plugin_data.run_action)(self.state, CString::new(id).unwrap().as_ptr() as *const c_char) }
+        unsafe {
+            (self.plugin_data.run_action)(
+                self.state,
+                CString::new(id).unwrap().as_ptr() as *const c_char,
+            )
+        }
     }
 
     pub fn get_variable(&self, id: String) -> String {
         unsafe {
-            let p = (self.plugin_data.get_variable)(self.state, CString::new(id).unwrap().as_ptr() as *const c_char);
+            let p = (self.plugin_data.get_variable)(
+                self.state,
+                CString::new(id).unwrap().as_ptr() as *const c_char,
+            );
             read_drop_pointer(p)
         }
     }
 }
+
+unsafe impl Send for Plugin {}

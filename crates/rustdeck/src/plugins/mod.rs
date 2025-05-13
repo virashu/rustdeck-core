@@ -14,7 +14,16 @@ pub fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, Box<dyn std::error::E
     let libs = &paths
         .iter()
         .filter(|p| p.is_file())
-        .filter(|p| p.to_str().unwrap().ends_with(".dll"))
+        .filter(|p| {
+            let filename = p.to_str().unwrap();
+            let is_plugin = filename.ends_with(".deckplugin");
+
+            if !is_plugin {
+                tracing::warn!(r"Non-plugin found in 'plugins' directory: '{}'. Note that rustdeck plugins should have a `.deckplugin` extension.", filename);
+            }
+
+            is_plugin
+        })
         .collect::<Vec<_>>();
 
     for path in libs {
@@ -23,11 +32,12 @@ pub fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, Box<dyn std::error::E
                 plugins.push(plugin);
             }
             Err(e) => {
-                println!("Error loading {:?}:\n -> {}", path, e);
+                tracing::error!("Error loading {:?}:\n -> {}", path, e);
             }
         }
     }
 
-    println!("Loaded plugins ({})", plugins.len());
+    tracing::info!("Loaded plugins ({})", plugins.len());
+
     Ok(plugins)
 }

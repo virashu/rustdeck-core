@@ -9,18 +9,14 @@ fn init_plugin_dir() {
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    tracing_subscriber::fmt()
+        .with_max_level(tracing::Level::INFO)
+        .init();
+
     init_plugin_dir();
 
-    let mut deck = Deck::new()?;
+    let deck = Deck::new()?;
     deck.run();
-
-    // let plugins = plugins::load_plugins_at(std::path::Path::new("./plugins")).unwrap();
-
-    // for (i, plugin) in plugins.iter().enumerate() {
-    //     println!("{}) {}", i + 1, plugin.name);
-    // }
-
-    println!("OK");
 
     Ok(())
 }
