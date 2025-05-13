@@ -14,7 +14,33 @@ mod config {
     pub const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
 }
 
-pub struct DeckButton {}
+#[derive(Default)]
+enum DeckButtonStyleTextAlign {
+    #[default]
+    Center,
+    Left,
+    Right,
+}
+
+struct DeckButtonStyle {
+    text_align: DeckButtonStyleTextAlign,
+    text_size: u32,
+}
+
+impl Default for DeckButtonStyle {
+    fn default() -> Self {
+        Self {
+            text_size: 24,
+            text_align: DeckButtonStyleTextAlign::default(),
+        }
+    }
+}
+
+#[derive(Default)]
+struct DeckButton {
+    style: DeckButtonStyle,
+    content: String,
+}
 
 pub struct Deck {
     buttons: HashMap<(usize, usize), DeckButton>,
