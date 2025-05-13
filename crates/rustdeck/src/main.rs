@@ -4,7 +4,13 @@ mod deck;
 mod error;
 mod plugins;
 
+fn init_plugin_dir() {
+    std::fs::create_dir_all("./plugins").unwrap();
+}
+
 fn main() -> Result<(), Box<dyn std::error::Error>> {
+    init_plugin_dir();
+
     let mut deck = Deck::new()?;
     deck.run();
 

@@ -22,20 +22,11 @@ impl Deck {
     }
 
     pub fn run(&mut self) {
-        let c = self.render_variable("plugin_test.counter");
-        println!("Counter: {}", c);
+        loop {
+            self.plugins.iter_mut().for_each(|p| p.update());
 
-        self.try_run_action("plugin_test.increment").unwrap();
-
-        let c = self.render_variable("plugin_test.counter");
-        println!("Counter: {}", c);
-
-
-        // loop {
-        //     self.plugins.iter_mut().for_each(|p| p.update());
-
-        //     thread::sleep(Duration::from_millis(100));
-        // }
+            thread::sleep(Duration::from_millis(100));
+        }
     }
 
     fn try_resolve_variable(&self, id: &str) -> Result<String, String> {
