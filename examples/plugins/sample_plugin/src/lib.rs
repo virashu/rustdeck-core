@@ -31,7 +31,7 @@ unsafe extern "C" fn init() -> *mut c_void {
 }
 
 unsafe extern "C" fn update(state: *mut c_void) {
-    let state = &mut *(state as *mut PluginState);
+    let _state = &mut *(state as *mut PluginState);
 }
 
 unsafe extern "C" fn run_action(state: *mut c_void, id: *const c_char) {
