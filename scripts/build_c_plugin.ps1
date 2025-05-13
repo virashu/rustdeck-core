@@ -1,1 +1,1 @@
-gcc .\plugin_c\main.c -shared -o .\plugins\plugin_c.dll
+gcc .\examples\plugins\sample_c_plugin\main.c -shared -o .\plugins\sample_c_plugin.dll

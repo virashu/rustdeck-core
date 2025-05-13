@@ -1,6 +1,6 @@
-cargo build --package plugin
+cargo build --package sample_plugin
 
-Copy-Item .\target\debug\plugin.dll .\plugins\plugin.dll
+Copy-Item .\target\debug\sample_plugin.dll .\plugins\sample_plugin.dll
 Write-Output "Copied!"
 
-cargo run --package loader
+cargo run --package rustdeck
