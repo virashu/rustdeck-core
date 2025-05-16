@@ -15,7 +15,7 @@ pub fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, Box<dyn std::error::E
             let is_plugin = filename.ends_with(".deckplugin");
 
             if !is_plugin {
-                tracing::warn!(r"Non-plugin found in 'plugins' directory: '{}'. Note that rustdeck plugins should have a `.deckplugin` extension.", filename);
+                tracing::warn!("Non-plugin found in 'plugins' directory: '{}'. Note that rustdeck plugins should have a `.deckplugin` extension.", filename);
             }
 
             is_plugin
@@ -26,7 +26,7 @@ pub fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, Box<dyn std::error::E
                     Some(plugin)
                 }
                 Err(e) => {
-                    tracing::error!("Error loading {:?}: {}", p, e);
+                    tracing::error!("Error loading plugin {:?}: {}", p, e);
                     None
                 }
             }
