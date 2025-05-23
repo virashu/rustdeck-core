@@ -71,8 +71,6 @@ static BUTTON_VAR_REGEX: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock
 
 impl DeckButton {
     pub fn render_content(&self, deck: &Arc<Deck>) -> String {
-        // TODO: find variables in `content` and interpolate with values
-
         let input = &self.content;
 
         let a: Vec<(String, String)> = BUTTON_VAR_REGEX
@@ -224,11 +222,10 @@ impl Deck {
     }
 
     fn serialize_buttons(self: Arc<Self>) -> String {
-        let deck_ref = self.clone();
         let buttons: Vec<String> = self
             .buttons
             .iter()
-            .map(|(k, b)| b.serialize(k.to_owned(), &deck_ref.clone()))
+            .map(|(k, b)| b.serialize(k.to_owned(), &self.clone()))
             .collect();
         format!(r#"{{"buttons": [{}]}}"#, buttons.join(", "))
     }
