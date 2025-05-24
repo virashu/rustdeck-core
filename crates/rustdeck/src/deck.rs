@@ -72,7 +72,7 @@ static BUTTON_VAR_REGEX: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock
 });
 
 impl DeckButton {
-    pub fn render_content(&self, deck: &Arc<Deck>) -> String {
+    pub fn render_content(&self, deck: &Deck) -> String {
         let input = &self.content;
 
         let a: Vec<(String, String)> = BUTTON_VAR_REGEX
@@ -93,7 +93,7 @@ impl DeckButton {
         output
     }
 
-    pub fn serialize(&self, pos: (u32, u32), deck: &Arc<Deck>) -> String {
+    pub fn serialize(&self, pos: (u32, u32), deck: &Deck) -> String {
         format!(
             r#"{{"position": {{"y": {}, "x": {}}}, "style": {}, "content": "{}", "icon_image": {}}}"#,
             pos.0,
@@ -109,36 +109,38 @@ impl DeckButton {
 
 struct DeckServer {
     deck: Arc<Deck>,
+    host: String,
+    port: u32,
 }
 
 impl DeckServer {
-    pub const fn new(deck: Arc<Deck>) -> Self {
-        Self { deck }
+    pub const fn new(deck: Arc<Deck>, host: String, port: u32) -> Self {
+        Self { deck, host, port }
     }
 
     pub fn run(&self) {
         let mut app = saaba::App::new();
 
         let deck_ref = self.deck.clone();
-        app.get("/api/config", move |_| {
-            saaba::Response::from(Deck::serialize_config(&deck_ref))
+        app.get("/api/client/config", move |_| {
+            saaba::Response::from(deck_ref.serialize_config())
                 .with_header("Content-Type", "application/json")
                 .with_header("Access-Control-Allow-Origin", "*")
         });
 
         let deck_ref = self.deck.clone();
-        app.get("/api/buttons", move |_| {
-            saaba::Response::from(Deck::serialize_buttons(&deck_ref))
+        app.get("/api/client/buttons", move |_| {
+            saaba::Response::from(deck_ref.serialize_buttons())
                 .with_header("Content-Type", "application/json")
                 .with_header("Access-Control-Allow-Origin", "*")
         });
 
         let deck_ref = self.deck.clone();
-        app.post_var("/api/click/{y}/{x}", move |_, params| {
+        app.post_var("/api/client/click/{y}/{x}", move |_, params| {
             let y: u32 = params.get("y").unwrap().parse().unwrap();
             let x: u32 = params.get("x").unwrap().parse().unwrap();
 
-            match Deck::handle_click(&deck_ref, y, x) {
+            match deck_ref.handle_click(y, x) {
                 Ok(()) => saaba::Response::from(""),
                 Err(_) => saaba::Response::from_status(400u32),
             }
@@ -146,7 +148,7 @@ impl DeckServer {
         });
 
         let deck_ref = self.deck.clone();
-        app.get_var("/api/icon/{icon}", move |_, params| {
+        app.get_var("/api/client/icon/{icon}", move |_, params| {
             let icon_id = params.get("icon").unwrap();
             let icon_path = deck_ref.icons.get(icon_id.to_owned());
 
@@ -157,11 +159,13 @@ impl DeckServer {
                 .with_header("Access-Control-Allow-Origin", "*")
         });
 
-        app.run("0.0.0.0", 8989).unwrap();
+        app.run(&self.host, self.port).unwrap();
     }
 }
 
 struct DeckConfig {
+    pub http_host: String,
+    pub http_port: u32,
     pub cols: u32,
     pub rows: u32,
 }
@@ -229,13 +233,15 @@ impl Deck {
                 ),
             ]),
             plugins,
-            config: DeckConfig { cols: 5, rows: 3 },
+            config: DeckConfig { http_host: "0.0.0.0".into(), http_port: 8989, cols: 5, rows: 3 },
             icons: HashMap::from([("test_icon".into(), "icons/test_icon.png".into())])
         })
     }
 
     fn server_thread(self: Arc<Self>) {
-        let server = DeckServer::new(self);
+        let host = self.config.http_host.clone();
+        let port = self.config.http_port;
+        let server = DeckServer::new(self, host, port);
         server.run();
     }
 
@@ -308,23 +314,23 @@ impl Deck {
         Ok(())
     }
 
-    fn serialize_config(self: &Arc<Self>) -> String {
+    fn serialize_config(&self) -> String {
         format!(
             r#"{{"cols": {}, "rows": {}}}"#,
             self.config.cols, self.config.rows
         )
     }
 
-    fn serialize_buttons(self: &Arc<Self>) -> String {
+    fn serialize_buttons(&self) -> String {
         let buttons: Vec<String> = self
             .buttons
             .iter()
-            .map(|(k, b)| b.serialize(k.to_owned(), &self.clone()))
+            .map(|(k, b)| b.serialize(k.to_owned(), self))
             .collect();
         format!("[{}]", buttons.join(", "))
     }
 
-    fn handle_click(self: &Arc<Self>, y: u32, x: u32) -> Result<(), String> {
+    fn handle_click(&self, y: u32, x: u32) -> Result<(), String> {
         let action_id = &self
             .buttons
             .get(&(y, x))
