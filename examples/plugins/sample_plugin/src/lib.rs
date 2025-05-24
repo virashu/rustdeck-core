@@ -10,7 +10,7 @@ define_plugin! {
     name: "Plugin",
     description: "A sample plugin.",
     id: "plugin_test",
-    actions: "increment",
+    actions: "increment, clear",
     variables: "counter",
     data: CPlugin {
         init,
@@ -38,8 +38,14 @@ unsafe extern "C" fn run_action(state: *mut c_void, id: *const c_char) {
     let state = &mut *(state as *mut PluginState);
     let id = CStr::from_ptr(id).to_str().unwrap();
 
-    if id == "increment" {
-        state.counter += 1;
+    match id {
+        "increment" => {
+            state.counter += 1;
+        }
+        "clear" => {
+            state.counter = 0;
+        }
+        _ => {}
     }
 }
 

@@ -1,3 +1,8 @@
 [workspace]
 resolver = "2"
-members = ["crates/*", "examples/plugins/sample_plugin"]
+members = [
+  "crates/rustdeck",
+  "crates/rustdeck-common",
+  "crates/plugins/*",
+  "examples/plugins/sample_plugin",
+]

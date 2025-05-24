@@ -8,6 +8,7 @@ mod plugins;
 
 fn init_dirs() {
     std::fs::create_dir_all("./plugins").unwrap();
+    std::fs::create_dir_all("./icons").unwrap();
 }
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
