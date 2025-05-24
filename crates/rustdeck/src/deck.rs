@@ -1,9 +1,10 @@
 use std::collections::HashMap;
-use std::sync::{Arc, Mutex};
+use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
 
-use crate::plugins::{self, Plugin};
+use crate::buttons::DeckButton;
+use crate::plugins::PluginStore;
 
 mod config {
     use std::time::Duration;
@@ -14,96 +15,69 @@ mod config {
     pub const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
 }
 
-#[derive(Default)]
-enum DeckButtonStyleTextAlign {
-    #[default]
-    Center,
-    Left,
-    Right,
-}
+mod mock {
+    use std::collections::HashMap;
 
-impl std::fmt::Display for DeckButtonStyleTextAlign {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Center => "center",
-                Self::Left => "left",
-                Self::Right => "right",
-            }
-        )
-    }
-}
+    use crate::buttons::{DeckButton, DeckButtonStyle, DeckButtonStyleTextAlign};
 
-struct DeckButtonStyle {
-    text_align: DeckButtonStyleTextAlign,
-    text_size: u32,
-}
+    use super::DeckConfig;
 
-impl DeckButtonStyle {
-    pub fn serialize(&self) -> String {
-        format!(
-            r#"{{"text_size": {}, "text_align": "{}"}}"#,
-            self.text_size, self.text_align
-        )
-    }
-}
-
-impl Default for DeckButtonStyle {
-    fn default() -> Self {
-        Self {
-            text_size: 24,
-            text_align: DeckButtonStyleTextAlign::default(),
+    pub fn mock_config() -> DeckConfig {
+        DeckConfig {
+            http_host: "0.0.0.0".into(),
+            http_port: 8989,
+            cols: 5,
+            rows: 3,
         }
     }
-}
 
-#[derive(Default)]
-struct DeckButton {
-    style: DeckButtonStyle,
-    icon: Option<String>,
-    content: String,
-    on_click_action: String,
-}
-
-static BUTTON_VAR_REGEX: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
-    regex::Regex::new(r"\{(?<v>[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\}").unwrap()
-});
-
-impl DeckButton {
-    pub fn render_content(&self, deck: &Deck) -> String {
-        let input = &self.content;
-
-        let a: Vec<(String, String)> = BUTTON_VAR_REGEX
-            .captures_iter(input)
-            .map(|m| {
-                let ident = &m["v"];
-                let value = deck.render_variable(ident);
-                (ident.to_owned(), value)
-            })
-            .collect();
-
-        let mut output = String::from(input);
-
-        for (s, var) in a {
-            output = output.replace(&format!("{{{s}}}"), &var);
-        }
-
-        output
-    }
-
-    pub fn serialize(&self, pos: (u32, u32), deck: &Deck) -> String {
-        format!(
-            r#"{{"position": {{"y": {}, "x": {}}}, "style": {}, "content": "{}", "icon_image": {}}}"#,
-            pos.0,
-            pos.1,
-            self.style.serialize(),
-            self.render_content(deck),
-            self.icon
-                .as_ref()
-                .map_or("null".into(), |s| format!("\"{s}\""))
-        )
+    pub fn mock_buttons() -> HashMap<(u32, u32), DeckButton> {
+        HashMap::from([
+                (
+                    (1, 1),
+                    DeckButton {
+                        style: DeckButtonStyle {
+                            text_align: DeckButtonStyleTextAlign::Right,
+                            ..Default::default()
+                        },
+                        content: String::from("Counter: {plugin_test.counter}"),
+                        on_click_action: String::from("plugin_test.increment"),
+                        icon: None,
+                    },
+                ),
+                (
+                    (1, 2),
+                    DeckButton {
+                        style: DeckButtonStyle {
+                            text_align: DeckButtonStyleTextAlign::Left,
+                            ..Default::default()
+                        },
+                        content: String::from("Clear counter"),
+                        on_click_action: String::from("plugin_test.clear"),
+                        icon: None,
+                    },
+                ),
+                (
+                    (1, 3),
+                    DeckButton {
+                        style: DeckButtonStyle::default(),
+                        content: String::new(),
+                        on_click_action: String::new(),
+                        icon: Some("test_icon".into()),
+                    },
+                ),
+                (
+                    (2, 3),
+                    DeckButton {
+                        style: DeckButtonStyle::default(),
+                        content: String::from(
+                            "State: {rustdeck_media.state}\\nTitle: '{rustdeck_media.title}'\\nArtist: '{rustdeck_media.artist}'",
+                        ),
+                        on_click_action: String::from("rustdeck_media.play_pause"),
+                        icon: None,
+                    },
+                ),
+            ])
     }
 }
 
@@ -173,68 +147,19 @@ struct DeckConfig {
 pub struct Deck {
     config: DeckConfig,
     buttons: HashMap<(u32, u32), DeckButton>,
-    plugins: HashMap<String, Mutex<Plugin>>,
+    plugin_store: PluginStore,
     icons: HashMap<String, String>,
 }
 
 impl Deck {
     pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let plugins = plugins::load_plugins_at(std::path::Path::new(config::PLUGIN_DIR))?;
-        let plugins = plugins
-            .into_iter()
-            .map(|p| (p.id.clone(), Mutex::new(p)))
-            .collect();
+        let plugin_store = PluginStore::new(config::PLUGIN_DIR)?;
 
         Ok(Self {
-            buttons: HashMap::from([
-                (
-                    (1, 1),
-                    DeckButton {
-                        style: DeckButtonStyle {
-                            text_align: DeckButtonStyleTextAlign::Right,
-                            ..Default::default()
-                        },
-                        content: String::from("Counter: {plugin_test.counter}"),
-                        on_click_action: String::from("plugin_test.increment"),
-                        icon: None,
-                    },
-                ),
-                (
-                    (1, 2),
-                    DeckButton {
-                        style: DeckButtonStyle {
-                            text_align: DeckButtonStyleTextAlign::Left,
-                            ..Default::default()
-                        },
-                        content: String::from("Clear counter"),
-                        on_click_action: String::from("plugin_test.clear"),
-                        icon: None,
-                    },
-                ),
-                (
-                    (1, 3),
-                    DeckButton {
-                        style: DeckButtonStyle::default(),
-                        content: String::new(),
-                        on_click_action: String::new(),
-                        icon: Some("test_icon".into()),
-                    },
-                ),
-                (
-                    (2, 3),
-                    DeckButton {
-                        style: DeckButtonStyle::default(),
-                        content: String::from(
-                            "State: {rustdeck_media.state}\\nTitle: '{rustdeck_media.title}'\\nArtist: '{rustdeck_media.artist}'",
-                        ),
-                        on_click_action: String::from("rustdeck_media.play_pause"),
-                        icon: None,
-                    },
-                ),
-            ]),
-            plugins,
-            config: DeckConfig { http_host: "0.0.0.0".into(), http_port: 8989, cols: 5, rows: 3 },
-            icons: HashMap::from([("test_icon".into(), "icons/test_icon.png".into())])
+            buttons: mock::mock_buttons(),
+            plugin_store,
+            config: mock::mock_config(),
+            icons: HashMap::from([("test_icon".into(), "icons/test_icon.png".into())]),
         })
     }
 
@@ -257,61 +182,11 @@ impl Deck {
 
         loop {
             if inst.elapsed() > config::UPDATE_INTERVAL {
-                self_
-                    .plugins
-                    .values()
-                    .for_each(|p| p.lock().unwrap().update());
+                self_.plugin_store.update_all();
 
                 inst = Instant::now();
             }
         }
-    }
-
-    fn try_resolve_variable(&self, id: &str) -> Result<String, String> {
-        let (plug_id, i) = id.split_once('.').ok_or("Wrong variable format")?;
-        let plugin = self
-            .plugins
-            .get(plug_id)
-            .ok_or_else(|| format!("Cannot find plugin: `{plug_id}`"))?
-            .lock()
-            .unwrap();
-
-        if !plugin.variables.contains(&i.to_string()) {
-            return Err(format!(
-                "Plugin `{plug_id}` does not provide variable `{i}`"
-            ));
-        }
-
-        Ok(plugin.get_variable(i.to_string()))
-    }
-
-    fn render_variable(&self, id: &str) -> String {
-        match self.try_resolve_variable(id) {
-            Err(s) | Ok(s) => s,
-        }
-    }
-
-    fn try_run_action(&self, id: &str) -> Result<(), String> {
-        let (plug_id, i) = id
-            .split_once('.')
-            .ok_or_else(|| format!("Wrong action format: `{id}`"))?;
-
-        {
-            let plugin = self
-                .plugins
-                .get(plug_id)
-                .ok_or_else(|| format!("Cannot find plugin: `{plug_id}`"))?
-                .lock()
-                .unwrap();
-
-            if !plugin.actions.contains(&i.to_string()) {
-                return Err(format!("Plugin `{plug_id}` does not provide action `{i}`"));
-            }
-
-            plugin.run_action(i.to_string());
-        }
-
-        Ok(())
     }
 
     fn serialize_config(&self) -> String {
@@ -325,8 +200,9 @@ impl Deck {
         let buttons: Vec<String> = self
             .buttons
             .iter()
-            .map(|(k, b)| b.serialize(k.to_owned(), self))
+            .map(|(k, b)| b.serialize(k.to_owned(), &self.plugin_store))
             .collect();
+
         format!("[{}]", buttons.join(", "))
     }
 
@@ -337,6 +213,6 @@ impl Deck {
             .expect("Failed to get button at required index")
             .on_click_action;
 
-        self.try_run_action(action_id)
+        self.plugin_store.try_run_action(action_id)
     }
 }

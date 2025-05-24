@@ -1,5 +1,7 @@
-mod plugin_wrapper;
 mod loading;
+mod plugin_wrapper;
+mod store;
 
-pub use plugin_wrapper::Plugin;
 pub use loading::load_plugins_at;
+pub use plugin_wrapper::Plugin;
+pub use store::PluginStore;

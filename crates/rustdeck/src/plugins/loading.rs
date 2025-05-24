@@ -3,7 +3,7 @@ use std::path::Path;
 
 use super::Plugin;
 
-pub fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, Box<dyn std::error::Error>> {
+pub fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, std::io::Error> {
     let plugins: Vec<_> = fs::read_dir(path)?
         .flatten()
         .map(|e| e.path())

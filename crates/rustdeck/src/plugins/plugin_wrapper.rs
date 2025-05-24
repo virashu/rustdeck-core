@@ -105,11 +105,14 @@ impl Plugin {
         }
     }
 
-    pub fn get_variable(&self, id: String) -> String {
+    pub fn get_variable<T>(&self, id: T) -> String
+    where
+        T: AsRef<str>,
+    {
         unsafe {
             let p = (self.inner.get_variable)(
                 self.state,
-                CString::new(id).unwrap().as_ptr().cast::<c_char>(),
+                CString::new(id.as_ref()).unwrap().as_ptr().cast::<c_char>(),
             );
             read_drop_pointer(p)
         }

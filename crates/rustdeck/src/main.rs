@@ -2,6 +2,7 @@
 
 use deck::Deck;
 
+mod buttons;
 mod deck;
 mod error;
 mod plugins;
