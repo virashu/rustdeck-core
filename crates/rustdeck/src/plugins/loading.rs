@@ -24,7 +24,7 @@ pub fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, std::io::Error> {
                     Some(plugin)
                 }
                 Err(e) => {
-                    tracing::error!("Error loading plugin {:?}: {}", p, e);
+                    tracing::warn!("Error loading plugin {:?}: {}", p, e);
                     None
                 }
             }

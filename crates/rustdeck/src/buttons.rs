@@ -46,11 +46,19 @@ impl Default for DeckButtonStyle {
 }
 
 #[derive(Default)]
+pub enum ButtonAction {
+    #[default]
+    None,
+    DeckAction(String),
+    PluginAction(String),
+}
+
+#[derive(Default)]
 pub struct DeckButton {
     pub style: DeckButtonStyle,
     pub icon: Option<String>,
     pub content: String,
-    pub on_click_action: String,
+    pub on_click_action: ButtonAction,
 }
 
 static BUTTON_VAR_REGEX: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock::new(|| {
