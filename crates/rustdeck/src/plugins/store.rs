@@ -92,8 +92,8 @@ impl PluginStore {
         let mut vars = HashMap::<String, String>::new();
 
         for (plugin_id, plugin) in &self.plugins {
-            let lock = plugin.lock().unwrap();
-            for var in &lock.variables {
+            let var_names = plugin.lock().unwrap().variables.clone();
+            for var in var_names {
                 let var_id = format!("{plugin_id}.{var}");
                 vars.insert(var_id.clone(), self.render_variable(var_id));
             }
