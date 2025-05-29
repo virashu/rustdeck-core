@@ -139,27 +139,6 @@ impl Deck {
         }
     }
 
-    pub fn serialize_config(&self) -> String {
-        format!(
-            r#"{{"cols": {}, "rows": {}}}"#,
-            self.config.cols, self.config.rows
-        )
-    }
-
-    pub fn serialize_buttons(&self) -> String {
-        let buttons: Vec<String> = self
-            .get_current_screen()
-            .iter()
-            .map(|(k, b)| b.serialize(k.to_owned(), &self.plugin_store))
-            .collect();
-
-        format!(
-            r#"{{"screen": "{}", "buttons": [{}]}}"#,
-            self.current_screen_id.lock().unwrap(),
-            buttons.join(", ")
-        )
-    }
-
     fn try_run_deck_action(&self, id: &str) -> Result<(), String> {
         let (action, args_str) = id.split_once(':').ok_or("Wrong format")?;
         let args: Vec<&str> = args_str.split(';').collect();
@@ -200,5 +179,53 @@ impl Deck {
 
     fn get_available_screens(&self) -> Vec<String> {
         self.screens.keys().map(ToOwned::to_owned).collect()
+    }
+
+    //
+    // Serialization
+    //
+    pub fn serialize_config(&self) -> String {
+        format!(
+            r#"{{"cols": {}, "rows": {}}}"#,
+            self.config.cols, self.config.rows
+        )
+    }
+
+    pub fn serialize_buttons(&self) -> String {
+        let buttons: Vec<String> = self
+            .get_current_screen()
+            .iter()
+            .map(|(k, b)| b.serialize(k.to_owned(), &self.plugin_store))
+            .collect();
+
+        format!(
+            r#"{{"screen": "{}", "buttons": [{}]}}"#,
+            self.current_screen_id.lock().unwrap(),
+            buttons.join(", ")
+        )
+    }
+
+    pub fn serialize_actions(&self) -> String {
+        format!(
+            "[{}]",
+            self.plugin_store
+                .get_all_actions_names()
+                .iter()
+                .map(|s| format!(r#""{s}""#))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
+    }
+
+    pub fn serialize_variables(&self) -> String {
+        format!(
+            "[{}]",
+            self.plugin_store
+                .get_all_variables()
+                .iter()
+                .map(|(k, v)| format!(r#""{k}": "{v}""#))
+                .collect::<Vec<_>>()
+                .join(", ")
+        )
     }
 }

@@ -23,6 +23,9 @@ impl DeckHttpServer {
     pub fn run(&self) {
         let mut app = saaba::App::new();
 
+        //
+        // Client
+        //
         let deck_ref = self.deck.clone();
         app.get("/api/client/config", move |_| {
             saaba::Response::from(deck_ref.serialize_config())
@@ -58,6 +61,21 @@ impl DeckHttpServer {
                 .map_or_else(saaba::Response::not_found, |path| {
                     saaba::Response::file(path).with_header("Content-Type", "image/png")
                 })
+                .with_header("Access-Control-Allow-Origin", "*")
+        });
+
+        //
+        // Config
+        //
+        let deck_ref = self.deck.clone();
+        app.get("/api/config/list/actions", move |_| {
+            saaba::Response::from(deck_ref.serialize_actions())
+                .with_header("Access-Control-Allow-Origin", "*")
+        });
+
+        let deck_ref = self.deck.clone();
+        app.get("/api/config/list/variables", move |_| {
+            saaba::Response::from(deck_ref.serialize_variables())
                 .with_header("Access-Control-Allow-Origin", "*")
         });
 

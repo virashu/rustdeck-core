@@ -101,4 +101,17 @@ impl PluginStore {
 
         vars
     }
+
+    pub fn get_all_actions_names(&self) -> Vec<String> {
+        let mut acts = Vec::<String>::new();
+
+        for (plugin_id, plugin) in &self.plugins {
+            let lock = plugin.lock().unwrap();
+            for act in &lock.actions {
+                acts.push(format!("{plugin_id}.{act}"));
+            }
+        }
+
+        acts
+    }
 }
