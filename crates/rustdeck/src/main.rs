@@ -1,15 +1,14 @@
 #![feature(try_blocks)]
-
-use std::{sync::Arc, thread};
-
-use deck::Deck;
-use server::DeckHttpServer;
-
 mod buttons;
 mod deck;
 mod error;
 mod plugins;
 mod server;
+
+use std::{sync::Arc, thread};
+
+use deck::Deck;
+use server::DeckHttpServer;
 
 fn init_dirs() {
     std::fs::create_dir_all("./plugins").unwrap();

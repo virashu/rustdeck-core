@@ -1,10 +1,8 @@
 use libloading::{Library, Symbol};
-use std::{
-    ffi::{c_char, c_void, CStr, CString, OsStr},
-    fmt::Debug,
-};
-
 use rustdeck_common::{interface, CPlugin};
+
+use std::ffi::{c_char, c_void, CStr, CString, OsStr};
+use std::fmt::Debug;
 
 unsafe fn get_str<'a>(
     library: &'a Library,

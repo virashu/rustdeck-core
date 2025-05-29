@@ -1,5 +1,7 @@
+use std::collections::HashMap;
 use std::io;
-use std::{collections::HashMap, sync::Mutex};
+use std::path::Path;
+use std::sync::Mutex;
 
 use super::{load_plugins_at, Plugin};
 
@@ -18,7 +20,7 @@ impl PluginStore {
     where
         S: AsRef<str>,
     {
-        let plugins = load_plugins_at(std::path::Path::new(path.as_ref()))?;
+        let plugins = load_plugins_at(Path::new(path.as_ref()))?;
         let plugins = plugins
             .into_iter()
             .map(|p| (p.id.clone(), Mutex::new(p)))
@@ -51,7 +53,7 @@ impl PluginStore {
             ));
         }
 
-        Ok(plugin.get_variable(i.to_string()))
+        Ok(plugin.get_variable(i))
     }
 
     pub fn render_variable<T>(&self, id: T) -> String
