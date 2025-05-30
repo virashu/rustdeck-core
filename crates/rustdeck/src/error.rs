@@ -1,8 +1,13 @@
 #[derive(Debug)]
 pub enum PluginLoadError {
+    /// Error loading (not a .dll/.so)
     NotALibrary(libloading::Error),
+    /// Other libloading errors
     GenericLibError(libloading::Error),
+    /// Cannot get needed function (`get_name`, etc.)
     SymbolError(std::str::Utf8Error),
+    /// Error with id/name...
+    FormatError(String),
 }
 
 impl From<libloading::Error> for PluginLoadError {
@@ -42,6 +47,7 @@ impl std::fmt::Display for PluginLoadError {
             Self::NotALibrary(e) => write!(f, "Not a library: {e}"),
             Self::GenericLibError(e) => write!(f, "Error loading library: {e}"),
             Self::SymbolError(e) => write!(f, "Symbol error: {e}"),
+            Self::FormatError(e) => write!(f, "Plugin format error: {e}"),
         }
     }
 }

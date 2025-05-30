@@ -4,10 +4,12 @@ use rustdeck_common::{interface, CPlugin};
 use std::ffi::{c_char, c_void, CStr, CString, OsStr};
 use std::fmt::Debug;
 
+use crate::error::PluginLoadError;
+
 unsafe fn get_str<'a>(
     library: &'a Library,
     ident: &[u8],
-) -> Result<&'a str, crate::error::PluginLoadError> {
+) -> Result<&'a str, PluginLoadError> {
     // First, the string exported by the plugin is read. For FFI-safety and
     // thread-safety, this must be a function that returns `*const c_char`.
     let name_fn = library.get::<extern "C" fn() -> *const c_char>(ident)?;
@@ -47,16 +49,20 @@ pub struct Plugin {
 }
 
 impl Plugin {
-    pub fn try_load<P>(path: P) -> Result<Self, crate::error::PluginLoadError>
+    pub fn try_load<P>(path: P) -> Result<Self, PluginLoadError>
     where
         P: AsRef<OsStr> + Debug,
     {
         unsafe {
             let lib = Library::new(path)?;
 
+            let id = get_str(&lib, interface::ID_IDENT)?.to_owned().to_lowercase();
+            if id == "deck" {
+                return Err(PluginLoadError::FormatError("Plugin id can not be 'deck', as it is reserved".into()))
+            }
+
             let name = get_str(&lib, interface::NAME_IDENT)?.to_owned();
             let description = get_str(&lib, interface::DESCRIPTION_IDENT)?.to_owned();
-            let id = get_str(&lib, interface::ID_IDENT)?.to_owned();
             let actions = get_str(&lib, interface::ACTIONS)?
                 .split(',')
                 .map(str::trim)
@@ -118,3 +124,5 @@ impl Plugin {
 }
 
 unsafe impl Send for Plugin {}
+
+unsafe impl Sync for Plugin {}
