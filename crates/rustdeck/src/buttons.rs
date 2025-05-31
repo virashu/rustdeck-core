@@ -58,6 +58,8 @@ impl DeckButtonPos {
     }
 }
 
+/// A deck button with its content rendered (interpolated with variables)
+/// and position
 #[derive(Clone, Debug, serde::Serialize)]
 pub struct RenderedDeckButton {
     pub position: DeckButtonPos,

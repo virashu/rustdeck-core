@@ -4,12 +4,9 @@ use rustdeck_common::{interface, CPlugin};
 use std::ffi::{c_char, c_void, CStr, CString, OsStr};
 use std::fmt::Debug;
 
-use crate::error::PluginLoadError;
+use super::error::PluginLoadError;
 
-unsafe fn get_str<'a>(
-    library: &'a Library,
-    ident: &[u8],
-) -> Result<&'a str, PluginLoadError> {
+unsafe fn get_str<'a>(library: &'a Library, ident: &[u8]) -> Result<&'a str, PluginLoadError> {
     // First, the string exported by the plugin is read. For FFI-safety and
     // thread-safety, this must be a function that returns `*const c_char`.
     let name_fn = library.get::<extern "C" fn() -> *const c_char>(ident)?;
@@ -56,9 +53,13 @@ impl Plugin {
         unsafe {
             let lib = Library::new(path)?;
 
-            let id = get_str(&lib, interface::ID_IDENT)?.to_owned().to_lowercase();
+            let id = get_str(&lib, interface::ID_IDENT)?
+                .to_owned()
+                .to_lowercase();
             if id == "deck" {
-                return Err(PluginLoadError::FormatError("Plugin id can not be 'deck', as it is reserved".into()))
+                return Err(PluginLoadError::FormatError(
+                    "Plugin id can not be 'deck', as it is reserved".into(),
+                ));
             }
 
             let name = get_str(&lib, interface::NAME_IDENT)?.to_owned();

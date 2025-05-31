@@ -1,10 +1,9 @@
 #![feature(try_blocks)]
 mod buttons;
+mod config;
 mod deck;
-mod error;
 mod plugins;
 mod server;
-mod config;
 
 use std::{sync::Arc, thread};
 

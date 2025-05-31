@@ -163,6 +163,7 @@ impl Deck {
         Ok(())
     }
 
+    /// Handles click of a button at position (y, x)
     pub fn handle_click_at(&self, pos: (u32, u32)) -> Result<(), String> {
         let action = self
             .get_current_screen()
@@ -181,12 +182,14 @@ impl Deck {
         }
     }
 
+    /// Get `RwLock` of the currently selected button screen
     fn get_current_screen(&self) -> &RwLock<ButtonScreen> {
         self.screens
             .get(&self.current_screen_id.read().clone())
             .unwrap()
     }
 
+    /// Get disk path of icon by its id
     pub fn get_icon<S>(&self, id: S) -> Option<&String>
     where
         S: AsRef<str>,
@@ -201,10 +204,12 @@ impl Deck {
         self.config.clone()
     }
 
+    /// Get names of all available button screens
     pub fn get_available_screens(&self) -> Vec<String> {
         self.screens.keys().map(ToOwned::to_owned).collect()
     }
 
+    /// Get a render of currently selected screen
     pub fn get_rendered_screen(&self) -> DeckScreen {
         DeckScreen {
             screen: self.current_screen_id.read().clone(),
@@ -217,6 +222,7 @@ impl Deck {
         }
     }
 
+    /// Get (not rendered) button by position (y, x)
     pub fn get_raw_button(&self, pos: (u32, u32)) -> DeckButton {
         self.get_current_screen()
             .read()
@@ -225,10 +231,12 @@ impl Deck {
             .unwrap_or_default()
     }
 
+    /// Get names and values of all available variables
     pub fn get_all_variables(&self) -> HashMap<String, String> {
         self.plugin_store.get_all_variables()
     }
 
+    /// Get names of all available actions
     pub fn get_all_actions_names(&self) -> Vec<String> {
         [
             self.plugin_store.get_all_actions_names(),
@@ -237,7 +245,8 @@ impl Deck {
         .concat()
     }
 
-    #[allow(clippy::significant_drop_tightening)] // Bro tweaking
+    /// Change raw button properties (`template`, `on_click_action`, etc.)
+    #[allow(clippy::significant_drop_tightening)] // Bro tweaking (false-positive)
     pub fn update_button(&self, pos: (u32, u32), update: DeckButtonUpdate) {
         let mut lock = self.get_current_screen().write();
         let button;

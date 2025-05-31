@@ -1,3 +1,4 @@
+mod error;
 mod loading;
 mod plugin_wrapper;
 mod store;

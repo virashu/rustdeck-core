@@ -8,15 +8,15 @@ pub fn load_plugins_at(path: &Path) -> Result<Vec<Plugin>, std::io::Error> {
         .flatten()
         .map(|e| e.path())
         .filter(|p| p.is_file())
-        .filter(|p| {
-            let filename = p.to_str().unwrap();
-            let is_plugin = filename.ends_with(".deckplugin");
-
-            if !is_plugin {
-                tracing::warn!("Non-plugin found in 'plugins' directory: '{}'. Note that rustdeck plugins should have a `.deckplugin` extension.", filename);
+        .filter_map(|p| {
+            match p.to_str() {
+                Some(s) if s.ends_with(".deckplugin") => { Some(p) }
+                Some(s) => {
+                    tracing::warn!("Non-plugin found in 'plugins' directory: '{}'. Note that rustdeck plugins should have a `.deckplugin` extension.", s);
+                    None
+                }
+                _ => None
             }
-
-            is_plugin
         }).filter_map(|p| {
             match Plugin::try_load(&p) {
                 Ok(plugin) => {
