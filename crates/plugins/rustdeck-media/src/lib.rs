@@ -5,6 +5,7 @@ use rustdeck_common::{define_plugin, CPlugin};
 use std::{
     ffi::{c_char, c_void, CStr, CString},
     mem::ManuallyDrop,
+    panic::catch_unwind,
     ptr::null_mut,
 };
 
@@ -57,7 +58,9 @@ unsafe extern "C" fn get_variable(state: *mut c_void, id: *const c_char) -> *mut
     let _state = &mut *state.cast::<PluginState>();
     let id = CStr::from_ptr(id).to_str().unwrap();
 
-    let media_info = block_on(MediaSession::new()).get_info();
+    let Ok(media_info) = catch_unwind(|| block_on(MediaSession::new()).get_info()) else {
+        return null_mut();
+    };
 
     match id {
         "title" => string_to_ptr(media_info.title),

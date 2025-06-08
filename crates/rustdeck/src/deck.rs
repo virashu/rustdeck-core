@@ -3,101 +3,16 @@ use std::collections::HashMap;
 use std::time::Instant;
 
 use crate::buttons::{DeckButton, DeckButtonUpdate, RenderedDeckButton};
-use crate::config::DeckConfig;
+use crate::config::{DeckConfig, DeckButtonScreen, DeckDimensionConfig};
+use crate::constants::PLUGIN_DIR;
 use crate::plugins::PluginStore;
 
 mod config {
     use std::time::Duration;
 
-    pub const PLUGIN_DIR: &str = "./plugins";
-
     /// Update thread loop interval in millis
     pub const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
 }
-
-mod mock {
-    use std::collections::HashMap;
-
-    use crate::buttons::{DeckButton, DeckButtonStyle, DeckButtonStyleTextAlign};
-
-    use super::DeckConfig;
-
-    pub const fn mock_config() -> DeckConfig {
-        DeckConfig { cols: 5, rows: 3 }
-    }
-
-    pub fn mock_buttons_screen_1() -> HashMap<(u32, u32), DeckButton> {
-        HashMap::from([
-                (
-                    (1, 1),
-                    DeckButton {
-                        style: DeckButtonStyle {
-                            text_align: DeckButtonStyleTextAlign::Right,
-                            ..Default::default()
-                        },
-                        template: String::from("Counter: {plugin_test.counter}"),
-                        on_click_action: Some(String::from("plugin_test.increment")),
-                        icon: None,
-                    },
-                ),
-                (
-                    (1, 2),
-                    DeckButton {
-                        style: DeckButtonStyle {
-                            text_align: DeckButtonStyleTextAlign::Left,
-                            ..Default::default()
-                        },
-                        template: String::from("Clear counter"),
-                        on_click_action: Some(String::from("plugin_test.clear")),
-                        icon: None,
-                    },
-                ),
-                (
-                    (1, 3),
-                    DeckButton {
-                        style: DeckButtonStyle::default(),
-                        template: String::new(),
-                        on_click_action: None,
-                        icon: Some("test_icon".into()),
-                    },
-                ),
-                (
-                    (1, 4),
-                    DeckButton {
-                        style: DeckButtonStyle::default(),
-                        template: String::from("Switch to screen 2"),
-                        on_click_action: Some(String::from("deck.switch_screen:screen_2")),
-                        icon: None,
-                    },
-                ),
-                (
-                    (2, 3),
-                    DeckButton {
-                        style: DeckButtonStyle::default(),
-                        template: String::from(
-                            "State: {rustdeck_media.state}\\nTitle: '{rustdeck_media.title}'\\nArtist: '{rustdeck_media.artist}'",
-                        ),
-                        on_click_action: Some(String::from("rustdeck_media.play_pause")),
-                        icon: None,
-                    },
-                ),
-            ])
-    }
-
-    pub fn mock_buttons_screen_2() -> HashMap<(u32, u32), DeckButton> {
-        HashMap::from([(
-            (1, 1),
-            DeckButton {
-                style: DeckButtonStyle::default(),
-                template: String::from("Switch to screen 1"),
-                on_click_action: Some(String::from("deck.switch_screen:default")),
-                icon: None,
-            },
-        )])
-    }
-}
-
-type ButtonScreen = HashMap<(u32, u32), DeckButton>;
 
 #[derive(Debug, serde::Serialize)]
 pub struct DeckScreen {
@@ -106,32 +21,27 @@ pub struct DeckScreen {
 }
 
 pub struct Deck {
-    config: DeckConfig,
+    config: DeckDimensionConfig,
     current_screen_id: RwLock<String>,
-    screens: HashMap<String, RwLock<ButtonScreen>>,
+    screens: HashMap<String, RwLock<DeckButtonScreen>>,
     plugin_store: PluginStore,
     icons: HashMap<String, String>,
     deck_actions: Vec<String>,
 }
 
 impl Deck {
-    pub fn new() -> Result<Self, Box<dyn std::error::Error>> {
-        let plugin_store = PluginStore::new(config::PLUGIN_DIR)?;
+    pub fn new(config: DeckConfig) -> Result<Self, Box<dyn std::error::Error>> {
+        let plugin_store = PluginStore::new(PLUGIN_DIR)?;
 
         Ok(Self {
+            config: config.deck,
             current_screen_id: String::from("default").into(),
-            screens: HashMap::from([
-                (
-                    String::from("default"),
-                    mock::mock_buttons_screen_1().into(),
-                ),
-                (
-                    String::from("screen_2"),
-                    mock::mock_buttons_screen_2().into(),
-                ),
-            ]),
+            screens: config
+                .screens
+                .into_iter()
+                .map(|s| (s.0, s.1.into()))
+                .collect(),
             plugin_store,
-            config: mock::mock_config(),
             icons: HashMap::from([("test_icon".into(), "icons/test_icon.png".into())]),
             deck_actions: vec![String::from("deck.switch_screen")],
         })
@@ -183,7 +93,7 @@ impl Deck {
     }
 
     /// Get `RwLock` of the currently selected button screen
-    fn get_current_screen(&self) -> &RwLock<ButtonScreen> {
+    fn get_current_screen(&self) -> &RwLock<DeckButtonScreen> {
         self.screens
             .get(&self.current_screen_id.read().clone())
             .unwrap()
@@ -200,7 +110,7 @@ impl Deck {
     //
     // Getters
     //
-    pub fn get_config(&self) -> DeckConfig {
+    pub fn get_config(&self) -> DeckDimensionConfig {
         self.config.clone()
     }
 

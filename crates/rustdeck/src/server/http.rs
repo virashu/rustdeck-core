@@ -14,7 +14,7 @@ use tower_http::{
 
 use crate::{
     buttons::{DeckButton, DeckButtonUpdate},
-    config::DeckConfig,
+    config::DeckDimensionConfig,
     deck::{Deck, DeckScreen},
 };
 
@@ -23,7 +23,7 @@ struct AxumState {
     deck: Arc<Deck>,
 }
 
-async fn get_config(State(state): State<AxumState>) -> Json<DeckConfig> {
+async fn get_config(State(state): State<AxumState>) -> Json<DeckDimensionConfig> {
     Json(state.deck.get_config())
 }
 

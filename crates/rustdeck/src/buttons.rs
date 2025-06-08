@@ -1,4 +1,4 @@
-use serde::Deserialize;
+use serde::{Deserialize, Serialize};
 
 use crate::plugins::PluginStore;
 
@@ -6,11 +6,14 @@ static BUTTON_VAR_REGEX: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock
     regex::Regex::new(r"\{(?<v>[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\}").unwrap()
 });
 
-#[derive(Clone, Debug, Default, serde::Serialize)]
+#[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum DeckButtonStyleTextAlign {
     #[default]
+    #[serde(alias = "center")]
     Center,
+    #[serde(alias = "left")]
     Left,
+    #[serde(alias = "right")]
     Right,
 }
 
@@ -28,7 +31,7 @@ impl std::fmt::Display for DeckButtonStyleTextAlign {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeckButtonStyle {
     pub text_align: DeckButtonStyleTextAlign,
     pub text_size: u32,
@@ -43,7 +46,7 @@ impl Default for DeckButtonStyle {
     }
 }
 
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeckButtonPos {
     pub x: u32,
     pub y: u32,
@@ -56,11 +59,15 @@ impl DeckButtonPos {
             x: value.1,
         }
     }
+
+    pub const fn as_yx(&self) -> (u32, u32) {
+        (self.y, self.x)
+    }
 }
 
 /// A deck button with its content rendered (interpolated with variables)
 /// and position
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Clone, Debug, Serialize)]
 pub struct RenderedDeckButton {
     pub position: DeckButtonPos,
     pub style: DeckButtonStyle,
@@ -69,7 +76,7 @@ pub struct RenderedDeckButton {
     pub on_click_action: Option<String>,
 }
 
-#[derive(Clone, Debug, Default, serde::Serialize)]
+#[derive(Clone, Debug, Default, Serialize)]
 pub struct DeckButton {
     pub style: DeckButtonStyle,
     pub icon: Option<String>,

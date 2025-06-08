@@ -1,0 +1,26 @@
+{
+  "deck": {
+    "rows": 3,
+    "cols": 5
+  },
+  "screens": [
+    {
+      "id": "default",
+      "buttons": [
+        {
+          "position": {
+            "x": 1,
+            "y": 1
+          },
+          "template": "Hello, world!",
+          "on_click_action": null,
+          "icon": null,
+          "style": {
+            "text_align": "center",
+            "text_size": 24
+          }
+        }
+      ]
+    }
+  ]
+}
