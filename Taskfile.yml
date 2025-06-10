@@ -60,7 +60,7 @@ tasks:
 
     cmds:
       - mkdir -p ./icons/
-      - cp -r ./tests/test_resources/icons/ -t ./icons/
+      - cp -r ./tests/test_resources/icons/ -t .
       - cp ./tests/test_resources/config.json ./config.json
 
       - cargo run --package rustdeck
