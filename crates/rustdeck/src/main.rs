@@ -6,9 +6,6 @@ mod deck;
 mod plugins;
 mod server;
 
-#[cfg(feature = "mock")]
-mod mock;
-
 use std::fs;
 use std::path::Path;
 use std::{sync::Arc, thread};
@@ -24,21 +21,6 @@ fn init_dirs() {
 }
 
 fn load_config() -> DeckConfig {
-    #[cfg(feature = "mock")]
-    {
-        use std::collections::HashMap;
-
-        use crate::mock;
-
-        return DeckConfig {
-            deck: mock::mock_config(),
-            screens: HashMap::from([
-                ("default".into(), mock::mock_buttons_screen_1()),
-                ("screen_2".into(), mock::mock_buttons_screen_2()),
-            ]),
-        };
-    }
-
     if !Path::new(CONFIG_PATH).exists() {
         let config = DeckConfig::default();
         let config_ser = serde_json::to_string(&config).unwrap();
