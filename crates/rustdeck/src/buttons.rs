@@ -9,11 +9,11 @@ static BUTTON_VAR_REGEX: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum DeckButtonStyleTextAlign {
     #[default]
-    #[serde(alias = "center")]
+    #[serde(alias = "center", rename = "center")]
     Center,
-    #[serde(alias = "left")]
+    #[serde(alias = "left", rename = "left")]
     Left,
-    #[serde(alias = "right")]
+    #[serde(alias = "right", rename = "right")]
     Right,
 }
 
