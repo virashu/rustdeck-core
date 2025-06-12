@@ -1,0 +1,192 @@
+openapi: 3.1.1
+info:
+  title: Deck API
+  description: Rustdeck HTTP API
+  version: 1.0.0
+
+tags:
+  - name: Client
+  - name: Config
+
+paths:
+  # Client
+  /api/client/config:
+    get:
+      tags:
+        - Client
+      summary: Get config
+      description: Get deck dimensions config
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DeckDimensionsConfig'
+
+  /api/client/buttons:
+    get:
+      tags:
+        - Client
+      summary: Get buttons
+      description: Get current button screen
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/RenderedButton'
+
+  /api/client/click/{y}/{x}:
+    post:
+      tags:
+        - Client
+      summary: Post click
+      description: Send a click event on button (y;x)
+      parameters:
+        - name: y
+          in: path
+          required: true
+          schema:
+            type: integer
+        - name: x
+          in: path
+          required: true
+          schema:
+            type: integer
+
+  /api/client/icon/{id}:
+    get:
+      tags:
+        - Client
+      summary: Get icon
+      description: Get icon file (raw) by id
+      parameters:
+        - name: id
+          in: path
+          required: true
+          schema:
+            type: string
+
+  # Config
+  /api/config/list/variables:
+    get:
+      tags:
+        - Config
+      summary: List variables
+      description: Get a list of all available variables
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/config/list/actions:
+    get:
+      tags:
+        - Config
+      summary: List actions
+      description: Get a list of all available actions
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/config/list/screens:
+    get:
+      tags:
+        - Config
+      summary: List screens
+      description: Get a list of all button screens
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  type: string
+
+  /api/config/button/{y}/{x}:
+    get:
+      tags:
+        - Config
+      summary: Get raw button
+      description: Get raw button (template) by position (y;x)
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/RawButton'
+    patch:
+      tags:
+        - Config
+      summary: Update raw button
+      description: Update raw button template
+
+components:
+  schemas:
+
+    DeckDimensionsConfig:
+      type: object
+      properties:
+        cols:
+          type: integer
+        rows:
+          type: integer
+
+    RawButton:
+      type: object
+      properties:
+        template:
+          type: string
+        icon:
+          type: string?
+        on_click_action:
+          type: string?
+
+    RenderedButton:
+      type: object
+      properties:
+        content:
+          type: string
+        icon:
+          type: string?
+        style:
+          $ref: '#/components/schemas/ButtonStyle'
+        on_click_action:
+          type: string?
+        position:
+          type: object
+          properties:
+            y:
+              type: integer
+            x:
+              type: integer
+
+    ButtonStyle:
+      type: object
+      properties:
+        text_size:
+          type: integer
+        text_align:
+          type: string
+          enum:
+            - center
+            - left
+            - right
