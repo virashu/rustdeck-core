@@ -1,8 +1,10 @@
 [workspace]
-resolver = "2"
+package.edition = "2024"
+resolver = "3"
 members = [
   "crates/rustdeck",
   "crates/rustdeck-common",
   "crates/plugins/*",
   "examples/plugins/sample_plugin",
 ]
+default-members = ["crates/rustdeck"]

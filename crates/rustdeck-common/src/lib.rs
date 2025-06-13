@@ -36,32 +36,32 @@ macro_rules! define_plugin {
         const __ACTIONS: &str = concat!($actions, "\0");
         const __VARIABLES: &str = concat!($variables, "\0");
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn get_name() -> *const ::std::os::raw::c_char {
             __NAME.as_ptr() as _
         }
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn get_description() -> *const ::std::os::raw::c_char {
             __DESCRIPTION.as_ptr() as _
         }
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn get_id() -> *const ::std::os::raw::c_char {
             __ID.as_ptr() as _
         }
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn get_actions() -> *const ::std::os::raw::c_char {
             __ACTIONS.as_ptr() as _
         }
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         pub extern "C" fn get_variables() -> *const ::std::os::raw::c_char {
             __VARIABLES.as_ptr() as _
         }
 
-        #[no_mangle]
+        #[unsafe(no_mangle)]
         static PLUGIN: $crate::CPlugin = $data;
     };
 }

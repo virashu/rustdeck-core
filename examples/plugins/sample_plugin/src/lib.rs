@@ -31,12 +31,12 @@ unsafe extern "C" fn init() -> *mut c_void {
 }
 
 unsafe extern "C" fn update(state: *mut c_void) {
-    let _state = &mut *state.cast::<PluginState>();
+    let _state = unsafe { &mut *state.cast::<PluginState>() };
 }
 
 unsafe extern "C" fn run_action(state: *mut c_void, id: *const c_char) {
-    let state = &mut *state.cast::<PluginState>();
-    let id = CStr::from_ptr(id).to_str().unwrap();
+    let state = unsafe { &mut *state.cast::<PluginState>() };
+    let id = unsafe { CStr::from_ptr(id).to_str().unwrap() };
 
     match id {
         "increment" => {
@@ -50,8 +50,8 @@ unsafe extern "C" fn run_action(state: *mut c_void, id: *const c_char) {
 }
 
 unsafe extern "C" fn get_variable(state: *mut c_void, id: *const c_char) -> *mut c_char {
-    let state = &mut *state.cast::<PluginState>();
-    let id = CStr::from_ptr(id).to_str().unwrap();
+    let state = unsafe { &mut *state.cast::<PluginState>() };
+    let id = unsafe { CStr::from_ptr(id).to_str().unwrap() };
 
     if id == "counter" {
         let counter_value =

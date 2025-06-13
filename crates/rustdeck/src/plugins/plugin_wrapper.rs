@@ -1,7 +1,7 @@
 use libloading::{Library, Symbol};
-use rustdeck_common::{interface, CPlugin};
+use rustdeck_common::{CPlugin, interface};
 
-use std::ffi::{c_char, c_void, CStr, CString, OsStr};
+use std::ffi::{CStr, CString, OsStr, c_char, c_void};
 use std::fmt::Debug;
 
 use super::error::PluginLoadError;
@@ -9,13 +9,13 @@ use super::error::PluginLoadError;
 unsafe fn get_str<'a>(library: &'a Library, ident: &[u8]) -> Result<&'a str, PluginLoadError> {
     // First, the string exported by the plugin is read. For FFI-safety and
     // thread-safety, this must be a function that returns `*const c_char`.
-    let name_fn = library.get::<extern "C" fn() -> *const c_char>(ident)?;
+    let name_fn = unsafe { library.get::<extern "C" fn() -> *const c_char>(ident) }?;
     let name: *const c_char = name_fn();
 
     // Unfortunately there is no way to make sure this part is safe. We have
     // to assume the address exported by the plugin is valid. Otherwise,
     // this part may cause an abort.
-    let name = CStr::from_ptr(name);
+    let name = unsafe { CStr::from_ptr(name) };
 
     // Finally, the string is converted to UTF-8 and returned
     Ok(name.to_str()?)
@@ -26,17 +26,19 @@ unsafe fn read_drop_pointer(ptr: *mut c_char) -> String {
         return String::new();
     }
 
-    let c_str: &CStr = CStr::from_ptr(ptr);
+    let c_str: &CStr = unsafe { CStr::from_ptr(ptr) };
     let str_slice: &str = c_str.to_str().unwrap();
     let string = str_slice.to_owned();
 
-    std::ptr::drop_in_place(ptr);
+    unsafe { std::ptr::drop_in_place(ptr) };
 
     string
 }
 
 pub struct Plugin {
+    #[allow(dead_code, reason = "WIP")]
     pub name: String,
+    #[allow(dead_code, reason = "WIP")]
     pub description: String,
     pub id: String,
     pub actions: Vec<String>,
