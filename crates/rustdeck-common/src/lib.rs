@@ -37,27 +37,27 @@ macro_rules! define_plugin {
         const __VARIABLES: &str = concat!($variables, "\0");
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn get_name() -> *const ::std::os::raw::c_char {
+        pub extern "C" fn get_name() -> *const ::std::ffi::c_char {
             __NAME.as_ptr() as _
         }
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn get_description() -> *const ::std::os::raw::c_char {
+        pub extern "C" fn get_description() -> *const ::std::ffi::c_char {
             __DESCRIPTION.as_ptr() as _
         }
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn get_id() -> *const ::std::os::raw::c_char {
+        pub extern "C" fn get_id() -> *const ::std::ffi::c_char {
             __ID.as_ptr() as _
         }
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn get_actions() -> *const ::std::os::raw::c_char {
+        pub extern "C" fn get_actions() -> *const ::std::ffi::c_char {
             __ACTIONS.as_ptr() as _
         }
 
         #[unsafe(no_mangle)]
-        pub extern "C" fn get_variables() -> *const ::std::os::raw::c_char {
+        pub extern "C" fn get_variables() -> *const ::std::ffi::c_char {
             __VARIABLES.as_ptr() as _
         }
 
