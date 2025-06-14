@@ -2,16 +2,17 @@ use parking_lot::RwLock;
 use std::collections::HashMap;
 use std::time::Instant;
 
-use crate::buttons::{DeckButton, DeckButtonUpdate, RenderedDeckButton};
-use crate::config::{DeckConfig, DeckButtonScreen, DeckDimensionConfig};
-use crate::constants::PLUGIN_DIR;
+use crate::buttons::{DeckButton, DeckButtonUpdate, RenderedDeckButton, VariableRenderer};
+use crate::config::{DeckButtonScreen, DeckConfig, DeckDimensionConfig};
+use crate::constants::{DECK_ACTION_ID, DECK_ACTION_PREFIX, PLUGIN_DIR};
+use crate::models::PluginActionsData;
 use crate::plugins::PluginStore;
 
 mod config {
     use std::time::Duration;
 
     /// Update thread loop interval in millis
-    pub const UPDATE_INTERVAL: Duration = Duration::from_millis(100);
+    pub const UPDATE_INTERVAL: Duration = Duration::from_millis(1000);
 }
 
 #[derive(Debug, serde::Serialize)]
@@ -45,7 +46,7 @@ impl Deck {
                 .collect(),
             plugin_store,
             icons: HashMap::from([("test_icon".into(), "icons/test_icon.png".into())]),
-            deck_actions: vec![String::from("deck.switch_screen")],
+            deck_actions: vec![String::from("switch_screen")],
         })
     }
 
@@ -86,8 +87,8 @@ impl Deck {
             .clone();
 
         match action {
-            Some(id) if id.starts_with("deck.") => {
-                self.try_run_deck_action(id.strip_prefix("deck.").unwrap())
+            Some(id) if id.starts_with(DECK_ACTION_PREFIX) => {
+                self.try_run_deck_action(id.strip_prefix(DECK_ACTION_PREFIX).unwrap())
             }
             Some(id) => self.plugin_store.try_run_action(id),
             None => Ok(()),
@@ -123,13 +124,15 @@ impl Deck {
 
     /// Get a render of currently selected screen
     pub fn get_rendered_screen(&self) -> DeckScreen {
+        let mut vars = VariableRenderer::new(&self.plugin_store);
+
         DeckScreen {
             screen: self.current_screen_id.read().clone(),
             buttons: self
                 .get_current_screen()
                 .read()
                 .iter()
-                .map(|(pos, b)| b.render(*pos, &self.plugin_store))
+                .map(|(pos, b)| b.render(*pos, &mut vars))
                 .collect(),
         }
     }
@@ -151,10 +154,24 @@ impl Deck {
     /// Get names of all available actions
     pub fn get_all_actions_names(&self) -> Vec<String> {
         [
+            self.deck_actions
+                .iter()
+                .map(|a| format!("deck.{a}"))
+                .collect(),
             self.plugin_store.get_all_actions_names(),
-            self.deck_actions.clone(),
         ]
         .concat()
+    }
+
+    /// Get all actions with plugin id and name info
+    pub fn get_all_actions(&self) -> Vec<PluginActionsData> {
+        let mut actions = self.plugin_store.get_all_actions();
+        actions.insert(0, PluginActionsData {
+            id: DECK_ACTION_ID.to_owned(),
+            name: "Deck".into(),
+            actions: self.deck_actions.clone(),
+        });
+        actions
     }
 
     /// Change raw button properties (`template`, `on_click_action`, etc.)
@@ -171,5 +188,19 @@ impl Deck {
 
         button.template = update.template;
         button.on_click_action = update.on_click_action;
+        button.icon = update.icon;
+    }
+
+    pub fn delete_button(&self, pos: (u32, u32)) -> bool {
+        let mut lock = self.get_current_screen().write();
+        lock.remove(&pos).is_some()
+    }
+
+    pub fn switch_screen(&self, id: String) {
+        if !self.screens.contains_key(&id) || *self.current_screen_id.read() == id {
+            return;
+        }
+
+        *self.current_screen_id.write() = id;
     }
 }

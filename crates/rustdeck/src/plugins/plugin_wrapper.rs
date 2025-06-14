@@ -4,6 +4,8 @@ use rustdeck_common::{CPlugin, interface};
 use std::ffi::{CStr, CString, OsStr, c_char, c_void};
 use std::fmt::Debug;
 
+use crate::constants::DECK_ACTION_ID;
+
 use super::error::PluginLoadError;
 
 unsafe fn get_str<'a>(library: &'a Library, ident: &[u8]) -> Result<&'a str, PluginLoadError> {
@@ -62,7 +64,7 @@ impl Plugin {
             let id = get_str(&lib, interface::ID_IDENT)?
                 .to_owned()
                 .to_lowercase();
-            if id == "deck" {
+            if id == DECK_ACTION_ID {
                 return Err(PluginLoadError::FormatError(
                     "Plugin id can not be 'deck', as it is reserved".into(),
                 ));

@@ -1,11 +1,11 @@
 use std::{collections::HashMap, sync::Arc, thread};
 
 use axum::{
+    Json, Router,
     extract::{Path, State},
-    http::{header, Method, StatusCode},
+    http::{Method, StatusCode, header},
     response::IntoResponse,
     routing::{get, post},
-    Json, Router,
 };
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -16,6 +16,7 @@ use crate::{
     buttons::{DeckButton, DeckButtonUpdate},
     config::DeckDimensionConfig,
     deck::{Deck, DeckScreen},
+    models::PluginActionsData,
 };
 
 #[derive(Clone)]
@@ -36,6 +37,10 @@ async fn handle_click(State(state): State<AxumState>, Path(pos): Path<(u32, u32)
         Ok(()) => StatusCode::OK,
         Err(_) => StatusCode::BAD_REQUEST,
     }
+}
+
+async fn handle_switch_screen(State(state): State<AxumState>, Path(id): Path<String>) {
+    state.deck.switch_screen(id);
 }
 
 async fn get_icon(
@@ -72,12 +77,24 @@ async fn update_button(
     StatusCode::OK
 }
 
+async fn delete_button(State(state): State<AxumState>, Path(pos): Path<(u32, u32)>) -> StatusCode {
+    if state.deck.delete_button(pos) {
+        StatusCode::OK
+    } else {
+        StatusCode::NOT_FOUND
+    }
+}
+
 async fn list_variables(State(state): State<AxumState>) -> Json<HashMap<String, String>> {
     Json(state.deck.get_all_variables())
 }
 
-async fn list_actions(State(state): State<AxumState>) -> Json<Vec<String>> {
+async fn list_actions_ids(State(state): State<AxumState>) -> Json<Vec<String>> {
     Json(state.deck.get_all_actions_names())
+}
+
+async fn list_actions(State(state): State<AxumState>) -> Json<Vec<PluginActionsData>> {
+    Json(state.deck.get_all_actions())
 }
 
 async fn list_screens(State(state): State<AxumState>) -> Json<Vec<String>> {
@@ -92,7 +109,13 @@ where
 
     let cors = CorsLayer::new()
         .allow_origin(Any)
-        .allow_methods([Method::GET, Method::POST, Method::PATCH, Method::OPTIONS])
+        .allow_methods([
+            Method::GET,
+            Method::POST,
+            Method::PATCH,
+            Method::OPTIONS,
+            Method::DELETE,
+        ])
         .allow_headers([header::CONTENT_TYPE]);
 
     let app = Router::new()
@@ -100,10 +123,12 @@ where
         .route("/api/client/buttons", get(get_buttons))
         .route("/api/client/click/{y}/{x}", post(handle_click))
         .route("/api/client/icon/{id}", get(get_icon))
+        .route("/api/client/screen/{id}", post(handle_switch_screen))
         .route(
             "/api/config/button/{y}/{x}",
-            get(get_button).patch(update_button),
+            get(get_button).patch(update_button).delete(delete_button),
         )
+        .route("/api/config/list/actions_ids", get(list_actions_ids))
         .route("/api/config/list/actions", get(list_actions))
         .route("/api/config/list/variables", get(list_variables))
         .route("/api/config/list/screens", get(list_screens))

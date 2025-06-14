@@ -3,6 +3,7 @@ mod buttons;
 mod config;
 mod constants;
 mod deck;
+mod models;
 mod plugins;
 mod server;
 

@@ -3,7 +3,9 @@ use std::io;
 use std::path::Path;
 use std::sync::RwLock;
 
-use super::{load_plugins_at, Plugin};
+use crate::models::PluginActionsData;
+
+use super::{Plugin, load_plugins_at};
 
 pub struct PluginStore {
     plugins: HashMap<String, RwLock<Plugin>>,
@@ -87,7 +89,7 @@ impl PluginStore {
     }
 
     pub fn get_all_variables(&self) -> HashMap<String, String> {
-        let mut vars = HashMap::<String, String>::new();
+        let mut vars = HashMap::new();
 
         for (plugin_id, plugin) in &self.plugins {
             let var_names = plugin.read().unwrap().variables.clone();
@@ -101,13 +103,28 @@ impl PluginStore {
     }
 
     pub fn get_all_actions_names(&self) -> Vec<String> {
-        let mut acts = Vec::<String>::new();
+        let mut acts = Vec::new();
 
         for (plugin_id, plugin) in &self.plugins {
             let lock = plugin.read().unwrap();
             for act in &lock.actions {
                 acts.push(format!("{plugin_id}.{act}"));
             }
+        }
+
+        acts
+    }
+
+    pub fn get_all_actions(&self) -> Vec<PluginActionsData> {
+        let mut acts = Vec::new();
+
+        for (plugin_id, plugin) in &self.plugins {
+            let lock = plugin.read().unwrap();
+            acts.push(PluginActionsData {
+                id: plugin_id.clone(),
+                name: lock.name.clone(),
+                actions: lock.actions.clone(),
+            });
         }
 
         acts
