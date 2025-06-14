@@ -3,7 +3,7 @@
 // Plugin info
 pName("CLang Plugin")
 pDesc("CLang Plugin")
-pId("CLang Plugin")
+pId("clang_plugin")
 pActions("hello")
 pVars("")
 

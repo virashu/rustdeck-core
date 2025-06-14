@@ -7,7 +7,7 @@ use std::{
 use rustdeck_common::{define_plugin, CPlugin};
 
 define_plugin! {
-    name: "Plugin",
+    name: "Sample Plugin",
     description: "A sample plugin.",
     id: "plugin_test",
     actions: "increment, clear",

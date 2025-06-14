@@ -10,8 +10,8 @@ use std::{
 };
 
 define_plugin! {
-    name: "Plugin",
-    description: "A sample plugin.",
+    name: "RustDeck Media Plugin",
+    description: "A plugin for media management (music, video, etc.)",
     id: "rustdeck_media",
     actions: "play_pause",
     variables: "title, artist, state",
