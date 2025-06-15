@@ -25,7 +25,7 @@ struct AxumState {
 }
 
 async fn get_config(State(state): State<AxumState>) -> Json<DeckDimensionConfig> {
-    Json(state.deck.get_config())
+    Json(state.deck.get_dimensions_config())
 }
 
 async fn get_buttons(State(state): State<AxumState>) -> Json<DeckScreen> {

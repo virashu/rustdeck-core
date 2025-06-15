@@ -1,9 +1,12 @@
-use std::collections::HashMap;
+use std::{collections::HashMap, fs, path};
 
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::buttons::{DeckButton, DeckButtonPos, DeckButtonStyle};
+use crate::{
+    buttons::{DeckButton, DeckButtonPos, DeckButtonStyle},
+    constants::CONFIG_PATH,
+};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct DeckDimensionConfig {
@@ -147,4 +150,22 @@ impl<'de> Deserialize<'de> for DeckConfig {
     {
         Ok(SerializedDeckConfig::deserialize(deserializer)?.into())
     }
+}
+
+pub fn load_config() -> DeckConfig {
+    if !path::Path::new(CONFIG_PATH).exists() {
+        let config = DeckConfig::default();
+        let config_ser = serde_json::to_string_pretty(&config).unwrap();
+        fs::write(CONFIG_PATH, config_ser).expect("Failed to write default config");
+
+        return config;
+    }
+
+    let config_ser = fs::read(CONFIG_PATH).expect("Failed to read config");
+    serde_json::from_slice(&config_ser).expect("Failed to deserialize config")
+}
+
+pub fn save_config(config: &DeckConfig) {
+    let config_ser = serde_json::to_string_pretty(&config).unwrap();
+    fs::write(CONFIG_PATH, config_ser).expect("Failed to write config");
 }

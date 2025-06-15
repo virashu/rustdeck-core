@@ -1,5 +1,7 @@
+use indexmap::IndexMap;
 use parking_lot::RwLock;
 use std::collections::HashMap;
+use std::sync::Arc;
 use std::time::Instant;
 
 use crate::buttons::{DeckButton, DeckButtonUpdate, RenderedDeckButton, VariableRenderer};
@@ -23,8 +25,9 @@ pub struct DeckScreen {
 
 pub struct Deck {
     config: DeckDimensionConfig,
+    config_callback: Arc<dyn Fn(&DeckConfig) + Send + Sync + 'static>,
     current_screen_id: RwLock<String>,
-    screens: HashMap<String, RwLock<DeckButtonScreen>>,
+    screens: IndexMap<String, RwLock<DeckButtonScreen>>,
     plugin_store: PluginStore,
     icons: HashMap<String, String>,
     #[allow(clippy::struct_field_names)]
@@ -33,11 +36,15 @@ pub struct Deck {
 }
 
 impl Deck {
-    pub fn new(config: DeckConfig) -> Result<Self, Box<dyn std::error::Error>> {
+    pub fn new(
+        config: DeckConfig,
+        config_callback: impl Fn(&DeckConfig) + Send + Sync + 'static,
+    ) -> Result<Self, Box<dyn std::error::Error>> {
         let plugin_store = PluginStore::new(PLUGIN_DIR)?;
 
         Ok(Self {
             config: config.deck,
+            config_callback: Arc::new(config_callback),
             current_screen_id: RwLock::new(String::from("default")),
             screens: config
                 .screens
@@ -117,7 +124,7 @@ impl Deck {
     //
     // Getters
     //
-    pub fn get_config(&self) -> DeckDimensionConfig {
+    pub fn get_dimensions_config(&self) -> DeckDimensionConfig {
         self.config.clone()
     }
 
@@ -178,23 +185,33 @@ impl Deck {
     /// Change raw button properties (`template`, `on_click_action`, etc.)
     #[allow(clippy::significant_drop_tightening)] // Bro tweaking (false-positive)
     pub fn update_button(&self, pos: (u32, u32), update: DeckButtonUpdate) {
-        let mut lock = self.get_current_screen().write();
-        let button;
-        if let Some(b) = lock.get_mut(&pos) {
-            button = b;
-        } else {
-            lock.insert(pos, DeckButton::default());
-            button = lock.get_mut(&pos).unwrap();
+        {
+            let mut lock = self.get_current_screen().write();
+            let button;
+            if let Some(b) = lock.get_mut(&pos) {
+                button = b;
+            } else {
+                lock.insert(pos, DeckButton::default());
+                button = lock.get_mut(&pos).unwrap();
+            }
+
+            button.template = update.template;
+            button.on_click_action = update.on_click_action;
+            button.icon = update.icon;
         }
 
-        button.template = update.template;
-        button.on_click_action = update.on_click_action;
-        button.icon = update.icon;
+        (self.config_callback)(&self.get_config());
     }
 
     pub fn delete_button(&self, pos: (u32, u32)) -> bool {
-        let mut lock = self.get_current_screen().write();
-        lock.remove(&pos).is_some()
+        let success = {
+            let mut lock = self.get_current_screen().write();
+            lock.remove(&pos).is_some()
+        };
+        if success {
+            (self.config_callback)(&self.get_config());
+        }
+        success
     }
 
     pub fn switch_screen(&self, id: String) {
@@ -203,5 +220,16 @@ impl Deck {
         }
 
         *self.current_screen_id.write() = id;
+    }
+
+    pub fn get_config(&self) -> DeckConfig {
+        DeckConfig {
+            deck: self.config.clone(),
+            screens: self
+                .screens
+                .iter()
+                .map(|(id, screen)| (id.clone(), screen.read().clone()))
+                .collect(),
+        }
     }
 }
