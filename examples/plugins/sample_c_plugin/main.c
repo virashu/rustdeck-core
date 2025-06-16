@@ -33,9 +33,9 @@ run_action(void* state, char* id)
 }
 
 const Plugin somePlugin = {
-  .id = "some_plugin",
-  .name = "Some Plugin",
-  .desc = "Just some random plugin",
+  .id = "test_plugin_c",
+  .name = "C Sample Plugin",
+  .desc = "A sample plugin written in C",
   .variables =
     (const Variable*[]){
       &(Variable){ .id = "a", .desc = "A Variable", .type = Integer },
@@ -43,12 +43,12 @@ const Plugin somePlugin = {
       NULL },
   .actions =
     (const Action*[]){
-      &(Action){ .id = "play",
-                 .name = "Play",
-                 .desc = "Start the media playback",
+      &(Action){ .id = "test_action",
+                 .name = "Test Action",
+                 .desc = "A test action",
                  .args = (const ActionArg*[]){ &(ActionArg){
-                                                 .id = "file",
-                                                 .desc = "A media file to play",
+                                                 .id = "arg_1",
+                                                 .desc = "Arg test",
                                                  .type = String },
                                                NULL } },
       NULL },
