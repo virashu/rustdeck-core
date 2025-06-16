@@ -56,6 +56,20 @@ async fn handle_new_screen(State(state): State<AxumState>, Path(id): Path<String
     }
 }
 
+async fn delete_screen(State(state): State<AxumState>, Path(id): Path<String>) -> StatusCode {
+    match state.deck.delete_screen(id) {
+        Ok(()) => StatusCode::OK,
+        Err(()) => StatusCode::NOT_FOUND,
+    }
+}
+
+async fn rename_screen(State(state): State<AxumState>, Path(id): Path<String>, Json(new_name): Json<String>) -> StatusCode {
+    match state.deck.rename_screen(id, new_name) {
+        Ok(()) => StatusCode::OK,
+        Err(()) => StatusCode::NOT_FOUND,
+    }
+}
+
 async fn get_icon(
     State(state): State<AxumState>,
     Path(id): Path<String>,
@@ -152,7 +166,6 @@ where
         .route("/api/client/buttons", get(get_buttons))
         .route("/api/client/click/{y}/{x}", post(handle_click))
         .route("/api/client/icon/{id}", get(get_icon))
-        .route("/api/client/screen/{id}", post(handle_switch_screen))
         .route(
             "/api/config/button/{y}/{x}",
             get(get_button).patch(update_button).delete(delete_button),
@@ -163,7 +176,13 @@ where
         .route("/api/config/list/variables", get(list_variables))
         .route("/api/config/list/screens", get(list_screens))
         .route("/api/config/list/icons", get(list_icons))
-        .route("/api/config/screen/{id}", put(handle_new_screen))
+        .route(
+            "/api/config/screen/{id}",
+            put(handle_new_screen)
+                .post(handle_switch_screen)
+                .delete(delete_screen)
+                .patch(rename_screen),
+        )
         .with_state(state)
         .layer(cors)
         .layer(TraceLayer::new_for_http());

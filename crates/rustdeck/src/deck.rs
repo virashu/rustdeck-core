@@ -254,6 +254,31 @@ impl Deck {
         Ok(())
     }
 
+    pub fn rename_screen(&self, old_id: String, new_id: String) -> Result<(), ()> {
+        if !self.screens.read().contains_key(&old_id) || self.screens.read().contains_key(&new_id) {
+            return Err(());
+        }
+
+        {
+            let mut screens_lock = self.screens.write();
+            let index = screens_lock.get_index_of(&old_id).unwrap();
+            let screen = screens_lock.swap_remove(&old_id).unwrap();
+            screens_lock.insert(new_id, screen);
+            let last = screens_lock.len() - 1;
+            screens_lock.swap_indices(index, last);
+        }
+        Ok(())
+    }
+
+    pub fn delete_screen(&self, id: String) -> Result<(), ()> {
+        if !self.screens.read().contains_key(&id) {
+            return Err(());
+        }
+
+        self.screens.write().shift_remove(&id);
+        Ok(())
+    }
+
     pub fn swap_buttons(&self, a: (u32, u32), b: (u32, u32)) {
         {
             let mut screens_lock = self.screens.write();
