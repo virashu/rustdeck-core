@@ -1,11 +1,11 @@
-use std::{collections::HashMap, sync::Arc, thread};
+use std::{sync::Arc, thread};
 
 use axum::{
     Json, Router,
     extract::{Path, State},
     http::{Method, StatusCode, header},
     response::IntoResponse,
-    routing::{get, post},
+    routing::{get, patch, post, put},
 };
 use tower_http::{
     cors::{Any, CorsLayer},
@@ -13,11 +13,17 @@ use tower_http::{
 };
 
 use crate::{
-    buttons::{DeckButton, DeckButtonUpdate},
+    buttons::{DeckButton, DeckButtonPos, DeckButtonUpdate},
     config::DeckDimensionConfig,
     deck::{Deck, DeckScreen},
     models::{PluginActionsGroupedData, PluginActionsUngroupedData, PluginVariablesUngroupedData},
 };
+
+#[derive(serde::Deserialize)]
+struct PatchButtonsSwapRequest {
+    a: DeckButtonPos,
+    b: DeckButtonPos,
+}
 
 #[derive(Clone)]
 struct AxumState {
@@ -41,6 +47,13 @@ async fn handle_click(State(state): State<AxumState>, Path(pos): Path<(u32, u32)
 
 async fn handle_switch_screen(State(state): State<AxumState>, Path(id): Path<String>) {
     state.deck.switch_screen(id);
+}
+
+async fn handle_new_screen(State(state): State<AxumState>, Path(id): Path<String>) -> StatusCode {
+    match state.deck.new_screen(id) {
+        Ok(()) => StatusCode::OK,
+        Err(()) => StatusCode::CONFLICT,
+    }
 }
 
 async fn get_icon(
@@ -77,6 +90,17 @@ async fn update_button(
     StatusCode::OK
 }
 
+async fn swap_buttons(
+    State(state): State<AxumState>,
+    Json(buttons): Json<PatchButtonsSwapRequest>,
+) -> StatusCode {
+    state
+        .deck
+        .swap_buttons(buttons.a.as_yx(), buttons.b.as_yx());
+
+    StatusCode::OK
+}
+
 async fn delete_button(State(state): State<AxumState>, Path(pos): Path<(u32, u32)>) -> StatusCode {
     if state.deck.delete_button(pos) {
         StatusCode::OK
@@ -101,6 +125,10 @@ async fn list_screens(State(state): State<AxumState>) -> Json<Vec<String>> {
     Json(state.deck.get_available_screens())
 }
 
+async fn list_icons(State(state): State<AxumState>) -> Json<Vec<String>> {
+    Json(state.deck.get_all_icons())
+}
+
 async fn build_and_run<S>(deck_ref: Arc<Deck>, host: S, port: u32)
 where
     S: AsRef<str>,
@@ -115,6 +143,7 @@ where
             Method::PATCH,
             Method::OPTIONS,
             Method::DELETE,
+            Method::PUT,
         ])
         .allow_headers([header::CONTENT_TYPE]);
 
@@ -128,10 +157,13 @@ where
             "/api/config/button/{y}/{x}",
             get(get_button).patch(update_button).delete(delete_button),
         )
+        .route("/api/config/buttons/swap", patch(swap_buttons))
         .route("/api/config/list/actions_ids", get(list_actions_ids))
         .route("/api/config/list/actions", get(list_actions))
         .route("/api/config/list/variables", get(list_variables))
         .route("/api/config/list/screens", get(list_screens))
+        .route("/api/config/list/icons", get(list_icons))
+        .route("/api/config/screen/{id}", put(handle_new_screen))
         .with_state(state)
         .layer(cors)
         .layer(TraceLayer::new_for_http());

@@ -144,7 +144,7 @@ macro_rules! decl_plugin {
                     ::std::ffi::CString::new(res).unwrap(),
                 )))
                 .as_ptr()
-                .cast_mut()
+                .cast_mut();
             }
             unsafe extern "C" fn fn_run_action(
                 state: *mut ::std::ffi::c_void,

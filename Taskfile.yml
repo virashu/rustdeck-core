@@ -52,7 +52,7 @@ tasks:
 
       - 7z a -tzip -r ./dist/rustdeck.zip -w ./dist/pack/*
 
-  run_test:
+  mock_config:
     deps:
       - build_example_plugin
       - build_example_c_plugin
@@ -63,11 +63,14 @@ tasks:
       - cp -r ./tests/test_resources/icons/ -t .
       - cp ./tests/test_resources/config.json ./config.json
 
-      - cargo run --package rustdeck
-
   clean:
     cmds:
       - rm -rf ./dist
       - rm -rf ./icons
       - rm -rf ./plugins
       - rm -f  ./config.json
+
+  run_test:
+    deps: [mock_config]
+    cmds:
+      - cargo run --package rustdeck

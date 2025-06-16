@@ -30,7 +30,7 @@ pub struct Deck {
     config: DeckDimensionConfig,
     config_callback: Arc<dyn Fn(&DeckConfig) + Send + Sync + 'static>,
     current_screen_id: RwLock<String>,
-    screens: IndexMap<String, RwLock<DeckButtonScreen>>,
+    screens: RwLock<IndexMap<String, DeckButtonScreen>>,
     plugin_store: PluginStore,
     icons: HashMap<String, String>,
     #[allow(clippy::struct_field_names)]
@@ -49,11 +49,7 @@ impl Deck {
             config: config.deck,
             config_callback: Arc::new(config_callback),
             current_screen_id: RwLock::new(String::from("default")),
-            screens: config
-                .screens
-                .into_iter()
-                .map(|s| (s.0, RwLock::new(s.1)))
-                .collect(),
+            screens: RwLock::new(config.screens.into_iter().collect()),
             plugin_store,
             icons: HashMap::from([("test_icon".into(), "icons/test_icon.png".into())]),
             deck_actions: PluginActionsGroupedData {
@@ -97,8 +93,10 @@ impl Deck {
     /// Handles click of a button at position (y, x)
     pub fn handle_click_at(&self, pos: (u32, u32)) -> Result<(), String> {
         let action = self
-            .get_current_screen()
+            .screens
             .read()
+            .get(self.current_screen_id.read().as_str())
+            .unwrap()
             .get(&pos)
             .expect("Failed to get button at required index")
             .on_click_action
@@ -111,13 +109,6 @@ impl Deck {
             Some(id) => self.plugin_store.try_run_action(id),
             None => Ok(()),
         }
-    }
-
-    /// Get `RwLock` of the currently selected button screen
-    fn get_current_screen(&self) -> &RwLock<DeckButtonScreen> {
-        self.screens
-            .get(&self.current_screen_id.read().clone())
-            .unwrap()
     }
 
     /// Get disk path of icon by its id
@@ -137,7 +128,7 @@ impl Deck {
 
     /// Get names of all available button screens
     pub fn get_available_screens(&self) -> Vec<String> {
-        self.screens.keys().map(ToOwned::to_owned).collect()
+        self.screens.read().keys().map(ToOwned::to_owned).collect()
     }
 
     /// Get a render of currently selected screen
@@ -147,8 +138,10 @@ impl Deck {
         DeckScreen {
             screen: self.current_screen_id.read().clone(),
             buttons: self
-                .get_current_screen()
+                .screens
                 .read()
+                .get(self.current_screen_id.read().as_str())
+                .unwrap()
                 .iter()
                 .map(|(pos, b)| b.render(*pos, &mut vars))
                 .collect(),
@@ -157,8 +150,10 @@ impl Deck {
 
     /// Get (not rendered) button by position (y, x)
     pub fn get_raw_button(&self, pos: (u32, u32)) -> DeckButton {
-        self.get_current_screen()
+        self.screens
             .read()
+            .get(self.current_screen_id.read().as_str())
+            .unwrap()
             .get(&pos)
             .cloned()
             .unwrap_or_default()
@@ -193,17 +188,25 @@ impl Deck {
         actions
     }
 
+    pub fn get_all_icons(&self) -> Vec<String> {
+        self.icons.keys().map(ToOwned::to_owned).collect()
+    }
+
     /// Change raw button properties (`template`, `on_click_action`, etc.)
     #[allow(clippy::significant_drop_tightening)] // Bro tweaking (false-positive)
     pub fn update_button(&self, pos: (u32, u32), update: DeckButtonUpdate) {
         {
-            let mut lock = self.get_current_screen().write();
+            let mut screens_lock = self.screens.write();
+            let screen = screens_lock
+                .get_mut(self.current_screen_id.read().as_str())
+                .unwrap();
+
             let button;
-            if let Some(b) = lock.get_mut(&pos) {
+            if let Some(b) = screen.get_mut(&pos) {
                 button = b;
             } else {
-                lock.insert(pos, DeckButton::default());
-                button = lock.get_mut(&pos).unwrap();
+                screen.insert(pos, DeckButton::default());
+                button = screen.get_mut(&pos).unwrap();
             }
 
             button.template = update.template;
@@ -214,10 +217,14 @@ impl Deck {
         (self.config_callback)(&self.get_config());
     }
 
+    #[allow(clippy::significant_drop_tightening)]
     pub fn delete_button(&self, pos: (u32, u32)) -> bool {
         let success = {
-            let mut lock = self.get_current_screen().write();
-            lock.remove(&pos).is_some()
+            let mut screens_lock = self.screens.write();
+            let screen = screens_lock
+                .get_mut(self.current_screen_id.read().as_str())
+                .unwrap();
+            screen.remove(&pos).is_some()
         };
         if success {
             (self.config_callback)(&self.get_config());
@@ -226,11 +233,49 @@ impl Deck {
     }
 
     pub fn switch_screen(&self, id: String) {
-        if !self.screens.contains_key(&id) || *self.current_screen_id.read() == id {
+        if !self.screens.read().contains_key(&id) || *self.current_screen_id.read() == id {
             return;
         }
 
         *self.current_screen_id.write() = id;
+    }
+
+    pub fn new_screen(&self, id: String) -> Result<(), ()> {
+        if self.screens.read().contains_key(&id) {
+            return Err(());
+        }
+
+        self.screens.write().insert(id, HashMap::new());
+        Ok(())
+    }
+
+    pub fn swap_buttons(&self, a: (u32, u32), b: (u32, u32)) {
+        {
+            let mut screens_lock = self.screens.write();
+            let screen = screens_lock
+                .get_mut(self.current_screen_id.read().as_str())
+                .unwrap();
+
+            let button_a = screen.remove(&a);
+
+            if let Some(button) = button_a {
+                let button_b = screen.insert(b, button);
+
+                if let Some(button) = button_b {
+                    screen.insert(a, button);
+                }
+            } else {
+                let button_b = screen.remove(&b);
+
+                if let Some(button) = button_b {
+                    screen.insert(a, button);
+                }
+            }
+        }
+
+        {
+            (self.config_callback)(&self.get_config());
+        }
     }
 
     pub fn get_config(&self) -> DeckConfig {
@@ -238,8 +283,9 @@ impl Deck {
             deck: self.config.clone(),
             screens: self
                 .screens
+                .read()
                 .iter()
-                .map(|(id, screen)| (id.clone(), screen.read().clone()))
+                .map(|(id, screen)| (id.clone(), screen.clone()))
                 .collect(),
         }
     }
