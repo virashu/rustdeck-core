@@ -1,7 +1,7 @@
 {
   "deck": {
-    "rows": 3,
-    "cols": 5
+    "cols": 5,
+    "rows": 3
   },
   "screens": [
     {
@@ -16,35 +16,22 @@
             "text_align": "right",
             "text_size": 24
           },
-          "icon": null,
           "template": "Counter: {plugin_test.counter}",
-          "on_click_action": "plugin_test.increment"
+          "on_click_action": "plugin_test.increment",
+          "icon": null
         },
         {
           "position": {
-            "x": 4,
-            "y": 1
-          },
-          "style": {
-            "text_align": "center",
-            "text_size": 24
-          },
-          "icon": null,
-          "template": "Switch to screen 2",
-          "on_click_action": "deck.switch_screen:screen_2"
-        },
-        {
-          "position": {
-            "x": 3,
+            "x": 2,
             "y": 2
           },
           "style": {
             "text_align": "center",
             "text_size": 24
           },
-          "icon": null,
-          "template": "State: {rustdeck_media.state}\\nTitle: '{rustdeck_media.title}'\\nArtist: '{rustdeck_media.artist}'",
-          "on_click_action": "rustdeck_media.play_pause"
+          "template": "",
+          "on_click_action": "rustdeck_media.previous",
+          "icon": "back"
         },
         {
           "position": {
@@ -55,9 +42,9 @@
             "text_align": "left",
             "text_size": 24
           },
-          "icon": null,
           "template": "Clear counter",
-          "on_click_action": "plugin_test.clear"
+          "on_click_action": "plugin_test.clear",
+          "icon": null
         },
         {
           "position": {
@@ -68,9 +55,61 @@
             "text_align": "center",
             "text_size": 24
           },
-          "icon": "test_icon",
+          "template": "State: {rustdeck_media.state}\\nTitle: '{rustdeck_media.title}'\\nArtist: '{rustdeck_media.artist}'",
+          "on_click_action": "rustdeck_media.play_pause",
+          "icon": null
+        },
+        {
+          "position": {
+            "x": 5,
+            "y": 1
+          },
+          "style": {
+            "text_align": "center",
+            "text_size": 24
+          },
           "template": "",
-          "on_click_action": null
+          "on_click_action": null,
+          "icon": "test_icon"
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 2
+          },
+          "style": {
+            "text_align": "center",
+            "text_size": 24
+          },
+          "template": "",
+          "on_click_action": "rustdeck_media.next",
+          "icon": "forward"
+        },
+        {
+          "position": {
+            "x": 3,
+            "y": 2
+          },
+          "style": {
+            "text_align": "center",
+            "text_size": 24
+          },
+          "template": "",
+          "on_click_action": "rustdeck_media.play_pause",
+          "icon": "pause"
+        },
+        {
+          "position": {
+            "x": 4,
+            "y": 1
+          },
+          "style": {
+            "text_align": "center",
+            "text_size": 24
+          },
+          "template": "Switch to screen 2",
+          "on_click_action": "deck.switch_screen:screen_2",
+          "icon": null
         }
       ]
     },
@@ -86,9 +125,9 @@
             "text_align": "center",
             "text_size": 24
           },
-          "icon": null,
           "template": "Switch to screen 1",
-          "on_click_action": "deck.switch_screen:default"
+          "on_click_action": "deck.switch_screen:default",
+          "icon": null
         }
       ]
     }

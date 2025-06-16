@@ -51,7 +51,12 @@ impl Deck {
             current_screen_id: RwLock::new(String::from("default")),
             screens: RwLock::new(config.screens.into_iter().collect()),
             plugin_store,
-            icons: HashMap::from([("test_icon".into(), "icons/test_icon.png".into())]),
+            icons: HashMap::from([
+                ("test_icon".into(), "icons/test_icon.png".into()),
+                ("pause".into(), "icons/pause.png".into()),
+                ("forward".into(), "icons/forward.png".into()),
+                ("back".into(), "icons/back.png".into()),
+            ]),
             deck_actions: PluginActionsGroupedData {
                 id: String::from(DECK_ACTION_ID),
                 name: String::from(DECK_ACTION_NAME),
