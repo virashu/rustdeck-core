@@ -85,6 +85,7 @@ impl SerializedDeckButtonScreen {
 struct SerializedDeckConfig {
     deck: DeckDimensionConfig,
     screens: Vec<SerializedDeckButtonScreen>,
+    icons: HashMap<String, String>,
 }
 
 impl From<&DeckConfig> for SerializedDeckConfig {
@@ -99,6 +100,7 @@ impl From<&DeckConfig> for SerializedDeckConfig {
                     SerializedDeckButtonScreen::from_deck_button_screen(id, buttons)
                 })
                 .collect(),
+            icons: value.icons.clone(),
         }
     }
 }
@@ -112,6 +114,7 @@ impl From<SerializedDeckConfig> for DeckConfig {
                 .into_iter()
                 .map(SerializedDeckButtonScreen::into_deck_button_screen)
                 .collect(),
+            icons: value.icons,
         }
     }
 }
@@ -119,6 +122,7 @@ impl From<SerializedDeckConfig> for DeckConfig {
 pub struct DeckConfig {
     pub deck: DeckDimensionConfig,
     pub screens: DeckScreens,
+    pub icons: HashMap<String, String>,
 }
 
 impl Default for DeckConfig {
@@ -127,6 +131,7 @@ impl Default for DeckConfig {
         Self {
             deck: DeckDimensionConfig::default(),
             screens: IndexMap::from([("default".into(), HashMap::default())]),
+            icons: HashMap::default(),
         }
     }
 }
@@ -157,7 +162,13 @@ pub mod paths {
 
     fn get_root() -> PathBuf {
         #[cfg(feature = "portable")]
-        return env::current_exe().unwrap_or(".".into());
+        return env::current_exe()
+            .and_then(|p| {
+                p.parent()
+                    .ok_or(std::io::Error::new(std::io::ErrorKind::Other, ""))
+                    .map(|p| p.to_path_buf())
+            })
+            .unwrap_or(".".into());
 
         #[cfg(not(feature = "portable"))]
         return ".".into();

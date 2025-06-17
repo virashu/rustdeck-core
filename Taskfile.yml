@@ -70,6 +70,11 @@ tasks:
       - rm -rf ./plugins
       - rm -f  ./config.json
 
+  reset:
+    deps: [clean]
+    cmds:
+      - rm -rf ./target
+
   run_test:
     deps: [mock_config]
     cmds:

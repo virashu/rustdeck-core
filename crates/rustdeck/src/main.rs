@@ -15,6 +15,7 @@ use crate::deck::Deck;
 use crate::server::http;
 
 fn init_dirs() {
+    tracing::info!("Plugins dir: {}", &*paths::PLUGINS);
     fs::create_dir_all(&*paths::PLUGINS).unwrap();
     fs::create_dir_all(&*paths::ICONS).unwrap();
 }

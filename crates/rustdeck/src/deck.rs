@@ -52,12 +52,7 @@ impl Deck {
             current_screen_id: RwLock::new(String::from("default")),
             screens: RwLock::new(config.screens.into_iter().collect()),
             plugin_store,
-            icons: HashMap::from([
-                ("test_icon".into(), "icons/test_icon.png".into()),
-                ("pause".into(), "icons/pause.png".into()),
-                ("forward".into(), "icons/forward.png".into()),
-                ("back".into(), "icons/back.png".into()),
-            ]),
+            icons: config.icons,
             deck_actions: PluginActionsGroupedData {
                 id: String::from(DECK_ACTION_ID),
                 name: String::from(DECK_ACTION_NAME),
@@ -225,7 +220,9 @@ impl Deck {
             button.icon = update.icon;
         }
 
-        (self.config_callback)(&self.get_config());
+        {
+            self.save_config();
+        }
     }
 
     #[allow(clippy::significant_drop_tightening)]
@@ -238,7 +235,7 @@ impl Deck {
             screen.remove(&pos).is_some()
         };
         if success {
-            (self.config_callback)(&self.get_config());
+            self.save_config();
         }
         success
     }
@@ -256,7 +253,13 @@ impl Deck {
             return Err(());
         }
 
-        self.screens.write().insert(id, HashMap::new());
+        {
+            self.screens.write().insert(id, HashMap::new());
+        }
+
+        {
+            self.save_config();
+        }
         Ok(())
     }
 
@@ -273,6 +276,10 @@ impl Deck {
             let last = screens_lock.len() - 1;
             screens_lock.swap_indices(index, last);
         }
+
+        {
+            self.save_config();
+        }
         Ok(())
     }
 
@@ -281,7 +288,13 @@ impl Deck {
             return Err(());
         }
 
-        self.screens.write().shift_remove(&id);
+        {
+            self.screens.write().shift_remove(&id);
+        }
+
+        {
+            self.save_config();
+        }
         Ok(())
     }
 
@@ -310,19 +323,23 @@ impl Deck {
         }
 
         {
-            (self.config_callback)(&self.get_config());
+            self.save_config();
         }
     }
 
+    /// # Notes
+    /// `screens` read lock
     pub fn get_config(&self) -> DeckConfig {
         DeckConfig {
             deck: self.config.clone(),
-            screens: self
-                .screens
-                .read()
-                .iter()
-                .map(|(id, screen)| (id.clone(), screen.clone()))
-                .collect(),
+            screens: self.screens.read().clone(),
+            icons: self.icons.clone(),
         }
+    }
+
+    /// # Notes
+    /// `screens` read lock
+    fn save_config(&self) {
+        (self.config_callback)(&self.get_config());
     }
 }

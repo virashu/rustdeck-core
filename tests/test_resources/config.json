@@ -3,6 +3,12 @@
     "cols": 5,
     "rows": 3
   },
+  "icons": {
+    "test_icon": "icons/test_icon.png",
+    "pause": "icons/pause.png",
+    "forward": "icons/forward.png",
+    "back": "icons/back.png"
+  },
   "screens": [
     {
       "id": "default",
