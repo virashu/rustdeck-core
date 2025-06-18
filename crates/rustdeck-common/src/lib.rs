@@ -93,10 +93,15 @@ pub mod util {
     use std::{
         ffi::{CStr, CString, c_char},
         mem::ManuallyDrop,
+        str::Utf8Error,
     };
 
     pub unsafe fn ptr_to_str<'a>(ptr: *const c_char) -> &'a str {
         unsafe { CStr::from_ptr(ptr).to_str().unwrap() }
+    }
+
+    pub unsafe fn try_ptr_to_str<'a>(ptr: *const c_char) -> Result<&'a str, Utf8Error> {
+        unsafe { CStr::from_ptr(ptr).to_str() }
     }
 
     pub unsafe fn str_to_ptr(s: impl AsRef<str>) -> *const c_char {

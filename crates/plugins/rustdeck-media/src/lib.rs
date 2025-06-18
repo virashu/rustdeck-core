@@ -54,7 +54,7 @@ fn get_variable(_: &PluginState, id: &str) -> String {
 unsafe extern "C" fn build() -> *const Plugin {
     decl_plugin! {
         id: "rustdeck_media",
-        name: "RustDeck Media Plugin",
+        name: "RustDeck Media",
         desc: "A plugin for media management (music, video, etc.)",
         variables: variables!(
             decl_variable! {

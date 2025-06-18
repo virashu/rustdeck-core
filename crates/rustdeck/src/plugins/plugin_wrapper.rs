@@ -75,11 +75,11 @@ impl Plugin {
     {
         unsafe {
             let lib = Library::new(path)?;
-            let build: libloading::Symbol<BuildFn> = lib.get(b"build").unwrap();
+            let build: libloading::Symbol<BuildFn> = lib.get(b"build")?;
             let plugin_raw = build();
-            let plugin = plugin_raw.as_ref().unwrap();
+            let plugin = plugin_raw.as_ref().ok_or(PluginLoadError::BuildError)?;
 
-            let id = util::ptr_to_str(plugin.id).to_owned();
+            let id = util::try_ptr_to_str(plugin.id)?.to_owned();
 
             if id == DECK_ACTION_ID {
                 return Err(PluginLoadError::FormatError(
@@ -87,8 +87,8 @@ impl Plugin {
                 ));
             }
 
-            let name = util::ptr_to_str(plugin.name).to_owned();
-            let description = util::ptr_to_str(plugin.desc).to_owned();
+            let name = util::try_ptr_to_str(plugin.name)?.to_owned();
+            let description = util::try_ptr_to_str(plugin.desc)?.to_owned();
 
             let mut variables = Vec::new();
             if !plugin.variables.is_null() {
@@ -101,8 +101,8 @@ impl Plugin {
                     .as_ref()
                 {
                     variables.push(Variable {
-                        id: util::ptr_to_str(var.id).to_owned(),
-                        description: util::ptr_to_str(var.desc).to_owned(),
+                        id: util::try_ptr_to_str(var.id)?.to_owned(),
+                        description: util::try_ptr_to_str(var.desc)?.to_owned(),
                         r#type: var.r#type,
                     });
                     vars_offset += 1;
@@ -122,14 +122,13 @@ impl Plugin {
                     let mut args = Vec::new();
 
                     if !act.args.is_null() {
-                        //
                         let mut args_offset = 0;
                         while let Some(arg) =
                             act.args.offset(args_offset).as_ref().unwrap().as_ref()
                         {
                             args.push(ActionArg {
-                                id: util::ptr_to_str(arg.id).to_owned(),
-                                description: util::ptr_to_str(arg.desc).to_owned(),
+                                id: util::try_ptr_to_str(arg.id)?.to_owned(),
+                                description: util::try_ptr_to_str(arg.desc)?.to_owned(),
                                 r#type: arg.r#type,
                             });
 
@@ -138,9 +137,9 @@ impl Plugin {
                     }
 
                     actions.push(Action {
-                        id: util::ptr_to_str(act.id).to_owned(),
-                        name: util::ptr_to_str(act.name).to_owned(),
-                        description: util::ptr_to_str(act.desc).to_owned(),
+                        id: util::try_ptr_to_str(act.id)?.to_owned(),
+                        name: util::try_ptr_to_str(act.name)?.to_owned(),
+                        description: util::try_ptr_to_str(act.desc)?.to_owned(),
                         args,
                     });
 
