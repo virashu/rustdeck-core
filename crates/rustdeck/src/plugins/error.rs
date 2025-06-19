@@ -1,3 +1,5 @@
+use rustdeck_common::util::PtrToStrError;
+
 #[derive(Debug)]
 pub enum PluginLoadError {
     /// Error loading (not a .dll/.so)
@@ -11,7 +13,7 @@ pub enum PluginLoadError {
     /// Other libloading errors
     GenericLibError(libloading::Error),
     /// Failed to read string
-    ReadError(std::str::Utf8Error),
+    ReadError(PtrToStrError),
     /// Error with id/name...
     FormatError(String),
 }
@@ -58,8 +60,8 @@ impl From<libloading::Error> for PluginLoadError {
     }
 }
 
-impl From<std::str::Utf8Error> for PluginLoadError {
-    fn from(value: std::str::Utf8Error) -> Self {
+impl From<PtrToStrError> for PluginLoadError {
+    fn from(value: PtrToStrError) -> Self {
         Self::ReadError(value)
     }
 }

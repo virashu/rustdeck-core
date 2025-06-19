@@ -212,7 +212,7 @@ impl Deck {
     }
 
     /// Change raw button properties (`template`, `on_click_action`, etc.)
-    #[allow(clippy::significant_drop_tightening)] // Bro tweaking (false-positive)
+    #[allow(clippy::significant_drop_tightening, reason = "false-positive")] // Bro tweaking
     pub fn update_button(&self, pos: (u32, u32), update: DeckButtonUpdate) {
         {
             let mut screens_lock = self.screens.write();
@@ -239,7 +239,7 @@ impl Deck {
         }
     }
 
-    #[allow(clippy::significant_drop_tightening)]
+    #[allow(clippy::significant_drop_tightening, reason = "false-positive")]
     pub fn delete_button(&self, pos: (u32, u32)) -> bool {
         let success = {
             let mut screens_lock = self.screens.write();
@@ -277,15 +277,15 @@ impl Deck {
         Ok(())
     }
 
-    pub fn rename_screen(&self, old_id: String, new_id: String) -> Result<(), ()> {
-        if !self.screens.read().contains_key(&old_id) || self.screens.read().contains_key(&new_id) {
+    pub fn rename_screen(&self, old_id: &str, new_id: String) -> Result<(), ()> {
+        if !self.screens.read().contains_key(old_id) || self.screens.read().contains_key(&new_id) {
             return Err(());
         }
 
         {
             let mut screens_lock = self.screens.write();
-            let index = screens_lock.get_index_of(&old_id).unwrap();
-            let screen = screens_lock.swap_remove(&old_id).unwrap();
+            let index = screens_lock.get_index_of(old_id).unwrap();
+            let screen = screens_lock.swap_remove(old_id).unwrap();
             screens_lock.insert(new_id, screen);
             let last = screens_lock.len() - 1;
             screens_lock.swap_indices(index, last);
@@ -297,13 +297,13 @@ impl Deck {
         Ok(())
     }
 
-    pub fn delete_screen(&self, id: String) -> Result<(), ()> {
-        if !self.screens.read().contains_key(&id) {
+    pub fn delete_screen(&self, id: &str) -> Result<(), ()> {
+        if !self.screens.read().contains_key(id) {
             return Err(());
         }
 
         {
-            self.screens.write().shift_remove(&id);
+            self.screens.write().shift_remove(id);
         }
 
         {
@@ -312,6 +312,7 @@ impl Deck {
         Ok(())
     }
 
+    #[allow(clippy::significant_drop_tightening, reason = "false-positive")]
     pub fn swap_buttons(&self, a: (u32, u32), b: (u32, u32)) {
         {
             let mut screens_lock = self.screens.write();
