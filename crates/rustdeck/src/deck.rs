@@ -28,7 +28,7 @@ pub struct DeckScreen {
 }
 
 pub struct Deck {
-    config: DeckDimensionConfig,
+    config: RwLock<DeckDimensionConfig>,
     config_callback: Arc<dyn Fn(&DeckConfig) + Send + Sync + 'static>,
     current_screen_id: RwLock<String>,
     screens: RwLock<IndexMap<String, DeckButtonScreen>>,
@@ -47,7 +47,7 @@ impl Deck {
         let plugin_store = PluginStore::new(&*PLUGINS)?;
 
         Ok(Self {
-            config: config.deck,
+            config: RwLock::new(config.deck),
             config_callback: Arc::new(config_callback),
             current_screen_id: RwLock::new(String::from("default")),
             screens: RwLock::new(config.screens.into_iter().collect()),
@@ -129,7 +129,7 @@ impl Deck {
     // Getters
     //
     pub fn get_dimensions_config(&self) -> DeckDimensionConfig {
-        self.config.clone()
+        self.config.read().clone()
     }
 
     /// Get names of all available button screens
@@ -205,6 +205,10 @@ impl Deck {
 
     pub fn get_all_icons(&self) -> Vec<String> {
         self.icons.keys().map(ToOwned::to_owned).collect()
+    }
+
+    pub fn update_config(&self, update: DeckDimensionConfig) {
+        *self.config.write() = update;
     }
 
     /// Change raw button properties (`template`, `on_click_action`, etc.)
@@ -340,7 +344,7 @@ impl Deck {
     /// `screens` read lock
     pub fn get_config(&self) -> DeckConfig {
         DeckConfig {
-            deck: self.config.clone(),
+            deck: self.config.read().clone(),
             screens: self.screens.read().clone(),
             icons: self.icons.clone(),
         }

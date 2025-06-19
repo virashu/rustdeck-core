@@ -101,6 +101,10 @@ async fn get_button(
     Json(state.deck.get_raw_button(pos))
 }
 
+async fn update_config(State(state): State<AxumState>, Json(update): Json<DeckDimensionConfig>) {
+    state.deck.update_config(update);
+}
+
 async fn update_button(
     State(state): State<AxumState>,
     Path(pos): Path<(u32, u32)>,
@@ -189,6 +193,7 @@ where
         .route("/api/client/buttons", get(get_buttons))
         .route("/api/client/click/{y}/{x}", post(handle_click))
         .route("/api/client/icon/{id}", get(get_icon))
+        .route("/api/config/config", patch(update_config))
         .route(
             "/api/config/button/{y}/{x}",
             get(get_button).patch(update_button).delete(delete_button),
