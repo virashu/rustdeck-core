@@ -9,30 +9,31 @@ static BUTTON_VAR_REGEX: std::sync::LazyLock<regex::Regex> = std::sync::LazyLock
     regex::Regex::new(r"\{(?<var_id>[a-zA-Z0-9_]+\.[a-zA-Z0-9_]+)\}").unwrap()
 });
 
+/// Button content vertical align
 #[derive(Clone, Debug, Default, Deserialize, Serialize)]
 pub enum DeckButtonStyleTextAlign {
     #[default]
     #[serde(alias = "center", rename = "center")]
     Center,
-    #[serde(alias = "left", rename = "left")]
-    Left,
-    #[serde(alias = "right", rename = "right")]
-    Right,
+    #[serde(alias = "top", rename = "top")]
+    Top,
+    #[serde(alias = "bottom", rename = "bottom")]
+    Bottom,
 }
 
-impl std::fmt::Display for DeckButtonStyleTextAlign {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Center => "center",
-                Self::Left => "left",
-                Self::Right => "right",
-            }
-        )
-    }
-}
+// impl std::fmt::Display for DeckButtonStyleTextAlign {
+//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+//         write!(
+//             f,
+//             "{}",
+//             match self {
+//                 Self::Center => "center",
+//                 Self::Left => "left",
+//                 Self::Right => "right",
+//             }
+//         )
+//     }
+// }
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeckButtonStyle {
@@ -143,4 +144,5 @@ pub struct DeckButtonUpdate {
     pub template: String,
     pub on_click_action: Option<String>,
     pub icon: Option<String>,
+    pub style: DeckButtonStyle,
 }

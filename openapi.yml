@@ -204,9 +204,9 @@ components:
         text_align:
           type: string
           enum:
+            - top
             - center
-            - left
-            - right
+            - bottom
 
     PluginActionsData:
       type: object

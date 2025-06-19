@@ -231,6 +231,7 @@ impl Deck {
             button.template = update.template;
             button.on_click_action = update.on_click_action;
             button.icon = update.icon;
+            button.style = update.style;
         }
 
         {

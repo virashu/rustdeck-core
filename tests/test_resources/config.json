@@ -19,7 +19,7 @@
             "y": 1
           },
           "style": {
-            "text_align": "right",
+            "text_align": "center",
             "text_size": 24
           },
           "template": "Counter: {plugin_test.counter}",
@@ -45,7 +45,7 @@
             "y": 1
           },
           "style": {
-            "text_align": "left",
+            "text_align": "center",
             "text_size": 24
           },
           "template": "Clear counter",
