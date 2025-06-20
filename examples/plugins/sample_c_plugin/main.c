@@ -6,6 +6,8 @@
 
 #ifdef _WIN32
 #define EXPORT __declspec(dllexport) __stdcall
+#else
+#define EXPORT
 #endif // _WIN32
 
 void*

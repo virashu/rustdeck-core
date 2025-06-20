@@ -39,7 +39,7 @@ tasks:
   build_example_c_plugin:
     cmds:
       - mkdir -p ./plugins
-      - gcc ./examples/plugins/sample_c_plugin/main.c -shared -o ./plugins/sample_c_plugin.deckplugin
+      - gcc -fpic ./examples/plugins/sample_c_plugin/main.c -shared -o ./plugins/sample_c_plugin.deckplugin
 
   build_builtin_plugins:
     vars:
