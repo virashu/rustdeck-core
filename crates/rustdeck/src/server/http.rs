@@ -13,7 +13,7 @@ use tower_http::{
 };
 
 use crate::{
-    buttons::{DeckButton, DeckButtonPos, DeckButtonUpdate},
+    buttons::{RawDeckButton, DeckButtonPos, DeckButtonUpdate},
     config::DeckDimensionConfig,
     deck::{Deck, DeckScreen},
     models::{
@@ -97,7 +97,7 @@ async fn get_icon(
 async fn get_button(
     State(state): State<AxumState>,
     Path(pos): Path<(u32, u32)>,
-) -> Json<DeckButton> {
+) -> Json<RawDeckButton> {
     Json(state.deck.get_raw_button(pos))
 }
 
@@ -222,8 +222,8 @@ where
             "/api/config/screen/{id}",
             put(handle_new_screen)
                 .post(handle_switch_screen)
-                .delete(delete_screen)
-                .patch(rename_screen),
+                .patch(rename_screen)
+                .delete(delete_screen),
         )
         .with_state(state)
         .layer(cors)

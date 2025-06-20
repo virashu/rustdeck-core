@@ -12,8 +12,7 @@ paths:
   # Client
   /api/client/config:
     get:
-      tags:
-        - Client
+      tags: [Client]
       summary: Get config
       description: Get deck dimensions config
       responses:
@@ -26,8 +25,7 @@ paths:
 
   /api/client/buttons:
     get:
-      tags:
-        - Client
+      tags: [Client]
       summary: Get buttons
       description: Get current button screen
       responses:
@@ -38,12 +36,11 @@ paths:
               schema:
                 type: array
                 items:
-                  $ref: "#/components/schemas/RenderedButton"
+                  $ref: "#/components/schemas/RenderedDeckButton"
 
   /api/client/click/{y}/{x}:
     post:
-      tags:
-        - Client
+      tags: [Client]
       summary: Post click
       description: Send a click event on button (y;x)
       parameters:
@@ -60,8 +57,7 @@ paths:
 
   /api/client/screen/{id}:
     post:
-      tags:
-        - Client
+      tags: [Client]
       summary: Switch screen
       parameters:
         - name: id
@@ -72,8 +68,7 @@ paths:
 
   /api/client/icon/{id}:
     get:
-      tags:
-        - Client
+      tags: [Client]
       summary: Get icon
       description: Get icon file (raw) by id
       parameters:
@@ -84,10 +79,73 @@ paths:
             type: string
 
   # Config
+  /api/config/config:
+    patch:
+      tags: [Config]
+      summary: Update config
+      description: Update deck dimensions config
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/DeckDimensionsConfig"
+
+  /api/config/button/{y}/{x}:
+    parameters:
+      - name: y
+        in: path
+        required: true
+        schema:
+          type: integer
+      - name: x
+        in: path
+        required: true
+        schema:
+          type: integer
+    get:
+      tags: [Config]
+      summary: Get raw button
+      description: Get raw button (template) by position (y;x)
+      responses:
+        200:
+          description: success
+          content:
+            application/json:
+              schema:
+                $ref: "#/components/schemas/RawDeckButton"
+    patch:
+      tags: [Config]
+      summary: Update raw button
+      description: Update raw button template
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: "#/components/schemas/RawDeckButton"
+    delete:
+      tags: [Config]
+      summary: Delete raw button
+      description: Delete raw button template
+
+  /api/config/buttons/swap:
+    patch:
+      tags: [Config]
+      summary: Swap raw buttons
+      description: Swap raw button templates by position (y;x)
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                a:
+                  $ref: "#/components/schemas/Position"
+                b:
+                  $ref: "#/components/schemas/Position"
+
   /api/config/list/variables:
     get:
-      tags:
-        - Config
+      tags: [Config]
       summary: List variables
       description: Get a list of all available variables
       responses:
@@ -102,8 +160,7 @@ paths:
 
   /api/config/list/actions:
     get:
-      tags:
-        - Config
+      tags: [Config]
       summary: List actions
       description: Get a list of all available actions
       responses:
@@ -118,8 +175,7 @@ paths:
 
   /api/config/list/screens:
     get:
-      tags:
-        - Config
+      tags: [Config]
       summary: List screens
       description: Get a list of all button screens
       responses:
@@ -132,33 +188,16 @@ paths:
                 items:
                   type: string
 
-  /api/config/button/{y}/{x}:
-    get:
-      tags:
-        - Config
-      summary: Get raw button
-      description: Get raw button (template) by position (y;x)
-      responses:
-        200:
-          description: success
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/RawButton"
-    patch:
-      tags:
-        - Config
-      summary: Update raw button
-      description: Update raw button template
-
-    delete:
-      tags:
-        - Config
-      summary: Delete raw button
-      description: Delete raw button template
-
 components:
   schemas:
+    Position:
+      type: object
+      properties:
+        y:
+          type: integer
+        x:
+          type: integer
+
     DeckDimensionsConfig:
       type: object
       properties:
@@ -167,27 +206,27 @@ components:
         rows:
           type: integer
 
-    RawButton:
+    RawDeckButton:
       type: object
       properties:
         template:
           type: string
         icon:
-          type: string?
+          type: [string, "null"]
+        style:
+          $ref: "#/components/schemas/DeckButtonStyle"
         on_click_action:
-          type: string?
+          type: [string, "null"]
 
-    RenderedButton:
+    RenderedDeckButton:
       type: object
       properties:
         content:
           type: string
         icon:
-          type: string?
+          type: [string, "null"]
         style:
-          $ref: "#/components/schemas/ButtonStyle"
-        on_click_action:
-          type: string?
+          $ref: "#/components/schemas/DeckButtonStyle"
         position:
           type: object
           properties:
@@ -196,7 +235,7 @@ components:
             x:
               type: integer
 
-    ButtonStyle:
+    DeckButtonStyle:
       type: object
       properties:
         text_size:
@@ -207,6 +246,30 @@ components:
             - top
             - center
             - bottom
+
+    DeckActionArgs:
+      type: object
+      properties:
+        id:
+          type: string
+        description:
+          type: string
+        type:
+          type: number
+
+    DeckAction:
+      type: object
+      properties:
+        id:
+          type: string
+        name:
+          type: string
+        description:
+          type: string
+        args:
+          type: array
+          items:
+            $ref: "#/components/schemas/DeckActionArgs"
 
     PluginActionsData:
       type: object

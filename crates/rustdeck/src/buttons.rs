@@ -21,20 +21,6 @@ pub enum DeckButtonStyleTextAlign {
     Bottom,
 }
 
-// impl std::fmt::Display for DeckButtonStyleTextAlign {
-//     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-//         write!(
-//             f,
-//             "{}",
-//             match self {
-//                 Self::Center => "center",
-//                 Self::Left => "left",
-//                 Self::Right => "right",
-//             }
-//         )
-//     }
-// }
-
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeckButtonStyle {
     pub text_align: DeckButtonStyleTextAlign,
@@ -52,8 +38,8 @@ impl Default for DeckButtonStyle {
 
 #[derive(Clone, Debug, Deserialize, Serialize)]
 pub struct DeckButtonPos {
-    pub x: u32,
     pub y: u32,
+    pub x: u32,
 }
 
 impl DeckButtonPos {
@@ -77,7 +63,6 @@ pub struct RenderedDeckButton {
     pub style: DeckButtonStyle,
     pub icon: Option<String>,
     pub content: String,
-    pub on_click_action: Option<String>,
 }
 
 pub struct VariableRenderer<'a> {
@@ -106,15 +91,21 @@ impl<'a> VariableRenderer<'a> {
     }
 }
 
+#[derive(Clone, Debug, Serialize, Deserialize)]
+pub struct RawDeckButtonAction {
+    pub id: String,
+    pub args: Vec<String>,
+}
+
 #[derive(Clone, Debug, Default, Serialize)]
-pub struct DeckButton {
+pub struct RawDeckButton {
     pub style: DeckButtonStyle,
     pub icon: Option<String>,
     pub template: String,
-    pub on_click_action: Option<String>,
+    pub on_click_action: Option<RawDeckButtonAction>,
 }
 
-impl DeckButton {
+impl RawDeckButton {
     fn render_content(&self, vars: &mut VariableRenderer) -> String {
         if !self.template.contains('{') {
             return self.template.clone();
@@ -134,7 +125,6 @@ impl DeckButton {
             style: self.style.clone(),
             icon: self.icon.clone(),
             content: self.render_content(vars),
-            on_click_action: self.on_click_action.clone(),
         }
     }
 }
@@ -142,7 +132,7 @@ impl DeckButton {
 #[derive(Deserialize)]
 pub struct DeckButtonUpdate {
     pub template: String,
-    pub on_click_action: Option<String>,
+    pub on_click_action: Option<RawDeckButtonAction>,
     pub icon: Option<String>,
     pub style: DeckButtonStyle,
 }

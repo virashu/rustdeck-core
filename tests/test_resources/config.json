@@ -23,7 +23,7 @@
             "text_size": 24
           },
           "template": "Counter: {plugin_test.counter}",
-          "on_click_action": "plugin_test.increment",
+          "on_click_action": { "id": "plugin_test.increment", "args": [] },
           "icon": null
         },
         {
@@ -36,7 +36,7 @@
             "text_size": 24
           },
           "template": "",
-          "on_click_action": "rustdeck_media.previous",
+          "on_click_action": { "id": "rustdeck_media.previous", "args": [] },
           "icon": "back"
         },
         {
@@ -49,7 +49,7 @@
             "text_size": 24
           },
           "template": "Clear counter",
-          "on_click_action": "plugin_test.clear",
+          "on_click_action": { "id": "plugin_test.clear", "args": [] },
           "icon": null
         },
         {
@@ -88,7 +88,7 @@
             "text_size": 24
           },
           "template": "",
-          "on_click_action": "rustdeck_media.next",
+          "on_click_action": { "id": "rustdeck_media.next", "args": [] },
           "icon": "forward"
         },
         {
@@ -101,7 +101,7 @@
             "text_size": 24
           },
           "template": "",
-          "on_click_action": "rustdeck_media.play_pause",
+          "on_click_action": { "id": "rustdeck_media.play_pause", "args": [] },
           "icon": "pause"
         },
         {
@@ -114,7 +114,10 @@
             "text_size": 24
           },
           "template": "Switch to screen 2",
-          "on_click_action": "deck.switch_screen:screen_2",
+          "on_click_action": {
+            "id": "deck.switch_screen",
+            "args": ["screen_2"]
+          },
           "icon": null
         }
       ]
@@ -132,7 +135,10 @@
             "text_size": 24
           },
           "template": "Switch to screen 1",
-          "on_click_action": "deck.switch_screen:default",
+          "on_click_action": {
+            "id": "deck.switch_screen",
+            "args": ["default"]
+          },
           "icon": null
         }
       ]

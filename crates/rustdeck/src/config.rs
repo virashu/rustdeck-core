@@ -3,7 +3,7 @@ use std::{collections::HashMap, fs, path};
 use indexmap::IndexMap;
 use serde::{Deserialize, Serialize};
 
-use crate::buttons::{DeckButton, DeckButtonPos, DeckButtonStyle};
+use crate::buttons::{DeckButtonPos, DeckButtonStyle, RawDeckButton, RawDeckButtonAction};
 
 #[derive(Clone, Deserialize, Serialize)]
 pub struct DeckDimensionConfig {
@@ -17,7 +17,7 @@ impl Default for DeckDimensionConfig {
     }
 }
 
-pub type DeckButtonScreen = HashMap<(u32, u32), DeckButton>;
+pub type DeckButtonScreen = HashMap<(u32, u32), RawDeckButton>;
 pub type DeckScreens = IndexMap<String, DeckButtonScreen>;
 
 #[derive(Deserialize, Serialize)]
@@ -25,15 +25,15 @@ struct SerializedDeckButton {
     position: DeckButtonPos,
     style: DeckButtonStyle,
     template: String,
-    on_click_action: Option<String>,
+    on_click_action: Option<RawDeckButtonAction>,
     icon: Option<String>,
 }
 
 impl SerializedDeckButton {
-    pub fn into_deck_button(self) -> ((u32, u32), DeckButton) {
+    pub fn into_deck_button(self) -> ((u32, u32), RawDeckButton) {
         (
             self.position.as_yx(),
-            DeckButton {
+            RawDeckButton {
                 style: self.style,
                 icon: self.icon,
                 template: self.template,
@@ -42,7 +42,7 @@ impl SerializedDeckButton {
         )
     }
 
-    pub fn from_deck_button(pos: (u32, u32), value: DeckButton) -> Self {
+    pub fn from_deck_button(pos: (u32, u32), value: RawDeckButton) -> Self {
         Self {
             position: DeckButtonPos::from_yx(pos),
             icon: value.icon,

@@ -3,16 +3,18 @@ mod buttons;
 mod config;
 mod constants;
 mod deck;
+mod icon_store;
 mod models;
 mod plugins;
 mod server;
 
-use std::fs;
-use std::{sync::Arc, thread};
+use std::{fs, sync::Arc, thread};
 
-use crate::config::{load_config, paths, save_config};
-use crate::deck::Deck;
-use crate::server::http;
+use crate::{
+    config::{load_config, paths, save_config},
+    deck::Deck,
+    server::http,
+};
 
 fn init_dirs() {
     tracing::info!("Plugins dir: {}", &*paths::PLUGINS);

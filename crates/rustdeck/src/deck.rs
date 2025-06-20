@@ -1,18 +1,21 @@
+use std::{collections::HashMap, sync::Arc, time::Instant};
+
 use indexmap::IndexMap;
 use parking_lot::RwLock;
-use std::collections::HashMap;
-use std::sync::Arc;
-use std::time::Instant;
 
-use crate::buttons::{DeckButton, DeckButtonUpdate, RenderedDeckButton, VariableRenderer};
-use crate::config::paths::PLUGINS;
-use crate::config::{DeckButtonScreen, DeckConfig, DeckDimensionConfig};
-use crate::constants::{DECK_ACTION_ID, DECK_ACTION_NAME, DECK_ACTION_PREFIX};
-use crate::models::{
-    PluginActionArgsData, PluginActionsGroupedData, PluginActionsUngroupedData, PluginData,
-    PluginVariablesGroupedData, PluginVariablesUngroupedData,
+use crate::{
+    buttons::{
+        DeckButtonUpdate, RawDeckButton, RawDeckButtonAction, RenderedDeckButton, VariableRenderer,
+    },
+    config::{DeckButtonScreen, DeckConfig, DeckDimensionConfig, paths::PLUGINS},
+    constants::{DECK_ACTION_ID, DECK_ACTION_NAME, DECK_ACTION_PREFIX},
+    icon_store::IconStore,
+    models::{
+        PluginActionArgsData, PluginActionsGroupedData, PluginActionsUngroupedData, PluginData,
+        PluginVariablesGroupedData, PluginVariablesUngroupedData,
+    },
+    plugins::PluginStore,
 };
-use crate::plugins::PluginStore;
 
 mod config {
     use std::time::Duration;
@@ -33,7 +36,7 @@ pub struct Deck {
     current_screen_id: RwLock<String>,
     screens: RwLock<IndexMap<String, DeckButtonScreen>>,
     plugin_store: PluginStore,
-    icons: HashMap<String, String>,
+    icon_store: IconStore,
     #[allow(clippy::struct_field_names)]
     /// Actions of the deck itself
     deck_actions: PluginActionsGroupedData,
@@ -45,6 +48,7 @@ impl Deck {
         config_callback: impl Fn(&DeckConfig) + Send + Sync + 'static,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let plugin_store = PluginStore::new(&*PLUGINS)?;
+        let icon_store = IconStore::from_config(config.icons);
 
         Ok(Self {
             config: RwLock::new(config.deck),
@@ -52,12 +56,12 @@ impl Deck {
             current_screen_id: RwLock::new(String::from("default")),
             screens: RwLock::new(config.screens.into_iter().collect()),
             plugin_store,
-            icons: config.icons,
+            icon_store,
             deck_actions: PluginActionsGroupedData {
                 id: String::from(DECK_ACTION_ID),
                 name: String::from(DECK_ACTION_NAME),
                 actions: vec![PluginActionsUngroupedData {
-                    id: String::from("switch_screen"),
+                    id: String::from("deck.switch_screen"),
                     name: String::from("Switch screen"),
                     description: String::new(),
                     args: vec![PluginActionArgsData {
@@ -82,15 +86,14 @@ impl Deck {
         }
     }
 
-    fn try_run_deck_action<S>(&self, id: S) -> Result<(), String>
-    where
-        S: AsRef<str>,
-    {
-        let (action, args_str) = id.as_ref().split_once(':').ok_or("Wrong format")?;
-        let args: Vec<&str> = args_str.split(';').collect();
-
-        if action == "switch_screen" {
-            *self.current_screen_id.write() = args[0].to_string();
+    fn try_run_deck_action(&self, act: &RawDeckButtonAction) -> Result<(), String> {
+        #[allow(clippy::single_match, reason = "TODO")]
+        match act.id.as_str() {
+            "deck.switch_screen" => {
+                let arg = act.args.first().ok_or("Missing argument")?;
+                self.current_screen_id.write().clone_from(arg);
+            }
+            _ => {}
         }
 
         Ok(())
@@ -109,10 +112,8 @@ impl Deck {
             .clone();
 
         match action {
-            Some(id) if id.starts_with(DECK_ACTION_PREFIX) => {
-                self.try_run_deck_action(id.strip_prefix(DECK_ACTION_PREFIX).unwrap())
-            }
-            Some(id) => self.plugin_store.try_run_action(id),
+            Some(act) if act.id.starts_with(DECK_ACTION_PREFIX) => self.try_run_deck_action(&act),
+            Some(act) => self.plugin_store.try_run_action(&act),
             None => Ok(()),
         }
     }
@@ -122,7 +123,7 @@ impl Deck {
     where
         S: AsRef<str>,
     {
-        self.icons.get(id.as_ref())
+        self.icon_store.get_icon(id)
     }
 
     //
@@ -155,7 +156,7 @@ impl Deck {
     }
 
     /// Get (not rendered) button by position (y, x)
-    pub fn get_raw_button(&self, pos: (u32, u32)) -> DeckButton {
+    pub fn get_raw_button(&self, pos: (u32, u32)) -> RawDeckButton {
         self.screens
             .read()
             .get(self.current_screen_id.read().as_str())
@@ -204,7 +205,7 @@ impl Deck {
     }
 
     pub fn get_all_icons(&self) -> Vec<String> {
-        self.icons.keys().map(ToOwned::to_owned).collect()
+        self.icon_store.keys()
     }
 
     pub fn update_config(&self, update: DeckDimensionConfig) {
@@ -224,7 +225,7 @@ impl Deck {
             if let Some(b) = screen.get_mut(&pos) {
                 button = b;
             } else {
-                screen.insert(pos, DeckButton::default());
+                screen.insert(pos, RawDeckButton::default());
                 button = screen.get_mut(&pos).unwrap();
             }
 
@@ -348,7 +349,7 @@ impl Deck {
         DeckConfig {
             deck: self.config.read().clone(),
             screens: self.screens.read().clone(),
-            icons: self.icons.clone(),
+            icons: self.icon_store.to_config(),
         }
     }
 

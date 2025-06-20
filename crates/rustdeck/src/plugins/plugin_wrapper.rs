@@ -1,7 +1,9 @@
 use libloading::Library;
 
-use std::ffi::{CStr, CString, OsStr, c_char, c_void};
-use std::fmt::Debug;
+use std::{
+    ffi::{CStr, CString, OsStr, c_char, c_void},
+    fmt::Debug,
+};
 
 use rustdeck_common::{BuildFn, Plugin as FFIPlugin, util};
 

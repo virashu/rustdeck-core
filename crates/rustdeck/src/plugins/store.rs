@@ -1,11 +1,11 @@
-use std::collections::HashMap;
-use std::io;
-use std::path::Path;
-use std::sync::RwLock;
+use std::{collections::HashMap, io, path::Path, sync::RwLock};
 
-use crate::models::{
-    PluginActionArgsData, PluginActionsGroupedData, PluginActionsUngroupedData, PluginData,
-    PluginVariablesGroupedData, PluginVariablesUngroupedData,
+use crate::{
+    buttons::RawDeckButtonAction,
+    models::{
+        PluginActionArgsData, PluginActionsGroupedData, PluginActionsUngroupedData, PluginData,
+        PluginVariablesGroupedData, PluginVariablesUngroupedData,
+    },
 };
 
 use super::{Plugin, load_plugins_at};
@@ -64,14 +64,11 @@ impl PluginStore {
         }
     }
 
-    pub fn try_run_action<S>(&self, id: S) -> Result<(), String>
-    where
-        S: AsRef<str>,
-    {
-        let (plug_id, i) = id
-            .as_ref()
+    pub fn try_run_action(&self, act: &RawDeckButtonAction) -> Result<(), String> {
+        let (plug_id, i) = act
+            .id
             .split_once('.')
-            .ok_or_else(|| format!("Wrong action format: `{}`", id.as_ref()))?;
+            .ok_or_else(|| format!("Wrong action format: `{}`", act.id))?;
 
         {
             let plugin = self
