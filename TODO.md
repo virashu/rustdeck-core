@@ -2,3 +2,4 @@
   - Endpoint to POST icons
   - Option to package icons (icon packs/icons with plugin)
 - Action args
+- Dynamic icons (updated by plugins; for example, cover of now playing media)

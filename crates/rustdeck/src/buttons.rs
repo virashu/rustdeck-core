@@ -60,9 +60,10 @@ impl DeckButtonPos {
 #[derive(Clone, Debug, Serialize)]
 pub struct RenderedDeckButton {
     pub position: DeckButtonPos,
-    pub style: DeckButtonStyle,
-    pub icon: Option<String>,
     pub content: String,
+    pub style: DeckButtonStyle,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
 }
 
 pub struct VariableRenderer<'a> {
@@ -99,9 +100,11 @@ pub struct RawDeckButtonAction {
 
 #[derive(Clone, Debug, Default, Serialize)]
 pub struct RawDeckButton {
-    pub style: DeckButtonStyle,
-    pub icon: Option<String>,
     pub template: String,
+    pub style: DeckButtonStyle,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub icon: Option<String>,
+    #[serde(skip_serializing_if = "Option::is_none")]
     pub on_click_action: Option<RawDeckButtonAction>,
 }
 
@@ -132,7 +135,7 @@ impl RawDeckButton {
 #[derive(Deserialize)]
 pub struct DeckButtonUpdate {
     pub template: String,
-    pub on_click_action: Option<RawDeckButtonAction>,
-    pub icon: Option<String>,
     pub style: DeckButtonStyle,
+    pub icon: Option<String>,
+    pub on_click_action: Option<RawDeckButtonAction>,
 }
