@@ -293,14 +293,34 @@ impl Deck {
         }
 
         {
+            let mut current_lock = self.current_screen_id.write();
+            if *current_lock == old_id {
+                *current_lock = new_id;
+            }
+        }
+
+        {
             self.save_config();
         }
         Ok(())
     }
 
+    #[allow(clippy::significant_drop_tightening)]
     pub fn delete_screen(&self, id: &str) -> Result<(), ()> {
         if !self.screens.read().contains_key(id) {
             return Err(());
+        }
+
+        {
+            let screens_lock = self.screens.read();
+            let mut current_lock = self.current_screen_id.write();
+            if *current_lock == id {
+                let id_of_prev = screens_lock
+                    .get_index(screens_lock.get_index_of(id).unwrap() - 1)
+                    .unwrap()
+                    .0;
+                current_lock.clone_from(id_of_prev);
+            }
         }
 
         {
