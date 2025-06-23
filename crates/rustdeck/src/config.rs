@@ -168,10 +168,10 @@ pub mod paths {
         return env::current_exe()
             .and_then(|p| {
                 p.parent()
-                    .ok_or(std::io::Error::new(std::io::ErrorKind::Other, ""))
-                    .map(|p| p.to_path_buf())
+                    .ok_or_else(|| std::io::Error::other(""))
+                    .map(std::path::Path::to_path_buf)
             })
-            .unwrap_or(".".into());
+            .unwrap_or_else(|_| ".".into());
 
         #[cfg(not(feature = "portable"))]
         return ".".into();

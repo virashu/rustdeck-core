@@ -30,7 +30,7 @@ fn run_action(state: &PluginState, id: &str) {
 
 fn get_info() -> Option<MediaInfo> {
     let session_future = catch_unwind(async || MediaSession::new().await);
-    session_future.map_or(None, |session| Some(block_on(session).get_info()))
+    session_future.map_or(None, |session| Some(block_on(async { session.await.get_info().await })))
 }
 
 fn get_variable(_: &PluginState, id: &str) -> String {
