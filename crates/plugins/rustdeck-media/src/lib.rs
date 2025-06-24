@@ -1,4 +1,3 @@
-use futures::executor::block_on;
 use media_session::{MediaInfo, MediaSession, traits::MediaSessionControls};
 use rustdeck_common::{actions, decl_action, decl_plugin, decl_variable, export_plugin, variables};
 
@@ -10,7 +9,7 @@ struct PluginState {
 
 fn init() -> PluginState {
     PluginState {
-        player: block_on(MediaSession::new()),
+        player: MediaSession::new(),
     }
 }
 
@@ -18,21 +17,19 @@ fn update(_: &mut PluginState) {}
 
 fn run_action(state: &PluginState, id: &str) {
     match id {
-        "play_pause" => block_on(async { state.player.toggle_pause().await.unwrap() }),
-        "play" => block_on(async { state.player.play().await.unwrap() }),
-        "pause" => block_on(async { state.player.pause().await.unwrap() }),
-        "stop" => block_on(async { state.player.stop().await.unwrap() }),
-        "next" => block_on(async { state.player.next().await.unwrap() }),
-        "previous" => block_on(async { state.player.prev().await.unwrap() }),
+        "play_pause" => state.player.toggle_pause().unwrap(),
+        "play" => state.player.play().unwrap(),
+        "pause" => state.player.pause().unwrap(),
+        "stop" => state.player.stop().unwrap(),
+        "next" => state.player.next().unwrap(),
+        "previous" => state.player.prev().unwrap(),
         _ => {}
     }
 }
 
 fn get_info() -> Option<MediaInfo> {
-    let session_future = catch_unwind(async || MediaSession::new().await);
-    session_future.map_or(None, |session| {
-        Some(block_on(async { session.await.get_info().await }))
-    })
+    let session = catch_unwind(MediaSession::new);
+    session.map_or(None, |session| Some(session.get_info()))
 }
 
 fn get_variable(_: &PluginState, id: &str) -> String {
