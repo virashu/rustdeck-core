@@ -1,4 +1,7 @@
-use rustdeck_common::{actions, decl_action, decl_plugin, decl_variable, export_plugin, variables};
+use rustdeck_common::{
+    proto::Arg,
+    {actions, args, decl_action, decl_arg, decl_plugin, decl_variable, export_plugin, variables},
+};
 
 struct PluginState {
     counter: i32,
@@ -10,8 +13,20 @@ const fn init() -> PluginState {
 
 const fn update(_: &PluginState) {}
 
-fn run_action(state: &mut PluginState, id: &str) {
+fn get_variable(state: &PluginState, id: &str) -> String {
+    if id == "counter" {
+        state.counter.to_string()
+    } else {
+        String::new()
+    }
+}
+
+fn run_action(state: &mut PluginState, id: &str, args: *const Arg) {
     match id {
+        "add" => {
+            let amt = unsafe { args.as_ref().unwrap().i.as_ref().unwrap() };
+            state.counter += *amt;
+        }
         "increment" => {
             state.counter += 1;
         }
@@ -19,14 +34,6 @@ fn run_action(state: &mut PluginState, id: &str) {
             state.counter = 0;
         }
         _ => {}
-    }
-}
-
-fn get_variable(state: &PluginState, id: &str) -> String {
-    if id == "counter" {
-        state.counter.to_string()
-    } else {
-        String::new()
     }
 }
 
@@ -46,12 +53,24 @@ export_plugin! {
             decl_action! {
                 id: "increment",
                 name: "Increment",
-                desc: "Increment counter"
+                desc: "Increment counter",
+            },
+            decl_action! {
+                id: "add",
+                name: "Add",
+                desc: "Add value to counter",
+                args: args!(
+                    decl_arg! {
+                        name: "Amount",
+                        desc: "Amount",
+                        vtype: "int",
+                    },
+                ),
             },
             decl_action! {
                 id: "clear",
                 name: "Clear",
-                desc: "Set counter value to 0"
+                desc: "Set counter value to 0",
             },
         ),
 

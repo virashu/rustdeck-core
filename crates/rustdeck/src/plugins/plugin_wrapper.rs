@@ -6,7 +6,10 @@ use std::{
     mem::ManuallyDrop,
 };
 
-use rustdeck_common::{Arg, BuildFn, Plugin as FFIPlugin, util};
+use rustdeck_common::{
+    proto::{Arg, BuildFn, Plugin as FFIPlugin},
+    util,
+};
 
 use crate::constants::DECK_ACTION_ID;
 
@@ -240,10 +243,10 @@ impl Plugin {
                     b: &(a.parse::<bool>().unwrap()),
                 },
                 PluginDataType::Int => Arg {
-                    i: &(a.parse::<i32>().unwrap()),
+                    i: Box::into_raw(Box::new(a.parse::<i32>().unwrap())),
                 },
                 PluginDataType::Float => Arg {
-                    f: &(a.parse::<f32>().unwrap()),
+                    f: Box::into_raw(Box::new(a.parse::<f32>().unwrap())),
                 },
                 PluginDataType::String => Arg {
                     // FIXME: Leak.

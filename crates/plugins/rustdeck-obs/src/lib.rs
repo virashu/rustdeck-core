@@ -1,7 +1,8 @@
-#![allow(clippy::trivially_copy_pass_by_ref)]
-
 use obws::Client;
-use rustdeck_common::{decl_plugin, decl_variable, export_plugin, variables};
+use rustdeck_common::{
+    proto::Arg,
+    {decl_plugin, decl_variable, export_plugin, variables},
+};
 
 struct PluginState {
     rt: tokio::runtime::Runtime,
@@ -34,7 +35,7 @@ fn get_variable(state: &PluginState, id: &str) -> String {
     String::new()
 }
 
-fn run_action(_: &PluginState, _: &str) {}
+fn run_action(_: &PluginState, _: &str, _: *const Arg) {}
 
 export_plugin! {
     decl_plugin! {

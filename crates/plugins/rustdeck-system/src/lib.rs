@@ -1,13 +1,16 @@
 #![allow(clippy::trivially_copy_pass_by_ref, reason = "unit used as state")]
 
-use rustdeck_common::{actions, decl_action, decl_plugin, decl_variable, export_plugin, variables};
+use rustdeck_common::{
+    proto::Arg,
+    {actions, decl_action, decl_plugin, decl_variable, export_plugin, variables},
+};
 use system_shutdown::{reboot, shutdown};
 
 const fn init() {}
 
 const fn update(_: &()) {}
 
-fn run_action(_: &(), id: &str) {
+fn run_action(_: &(), id: &str, _: *const Arg) {
     match id {
         "shutdown" => {
             _ = shutdown();
