@@ -81,11 +81,10 @@ async fn rename_screen(
     }
 }
 
-async fn get_icon(
+async fn get_icon_raw(
     State(state): State<AxumState>,
     Path(id): Path<String>,
 ) -> Result<impl IntoResponse, StatusCode> {
-    // let icon_path = state.deck.get_icon_path(id);
     let icon = state.deck.get_icon_raw(id);
 
     match icon {
@@ -93,6 +92,20 @@ async fn get_icon(
             axum::response::AppendHeaders([(header::CONTENT_TYPE, "image/png")]),
             data,
         )),
+        Err(IconStoreGetError::NotFound) => Err(StatusCode::NOT_FOUND),
+        Err(IconStoreGetError::IoError(_)) => Err(StatusCode::INTERNAL_SERVER_ERROR),
+    }
+}
+
+#[cfg(feature = "icon_store_b64")]
+async fn get_icon_b64(
+    State(state): State<AxumState>,
+    Path(id): Path<String>,
+) -> Result<String, StatusCode> {
+    let icon = state.deck.get_icon_b64(id);
+
+    match icon {
+        Ok(data) => Ok(data),
         Err(IconStoreGetError::NotFound) => Err(StatusCode::NOT_FOUND),
         Err(IconStoreGetError::IoError(_)) => Err(StatusCode::INTERNAL_SERVER_ERROR),
     }
@@ -196,7 +209,8 @@ where
         .route("/api/client/config", get(get_config))
         .route("/api/client/buttons", get(get_buttons))
         .route("/api/client/click/{y}/{x}", post(handle_click))
-        .route("/api/client/icon/{id}", get(get_icon))
+        .route("/api/client/icon/raw/{id}", get(get_icon_raw))
+        .route("/api/client/icon/b64/{id}", get(get_icon_b64))
         .route("/api/config/config", patch(update_config))
         .route(
             "/api/config/button/{y}/{x}",

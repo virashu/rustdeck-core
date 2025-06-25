@@ -1,5 +1,8 @@
 use std::collections::HashMap;
 
+#[cfg(feature = "icon_store_b64")]
+use base64::{Engine, prelude::BASE64_STANDARD};
+
 pub enum IconStoreGetError {
     NotFound,
     #[allow(dead_code)]
@@ -36,6 +39,15 @@ impl IconStore {
         std::fs::read(icon_path)
             .inspect_err(|e| tracing::warn!("Failed to read registered image: {e}"))
             .map_err(IconStoreGetError::IoError)
+    }
+
+    #[cfg(feature = "icon_store_b64")]
+    pub fn get_icon_b64<S>(&self, id: S) -> Result<String, IconStoreGetError>
+    where
+        S: AsRef<str>,
+    {
+        let icon_raw = self.get_icon_raw(id)?;
+        Ok(BASE64_STANDARD.encode(icon_raw))
     }
 
     // TODO

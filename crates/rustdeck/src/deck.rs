@@ -126,6 +126,14 @@ impl Deck {
         self.icon_store.get_icon_raw(id)
     }
 
+    #[cfg(feature = "icon_store_b64")]
+    pub fn get_icon_b64<S>(&self, id: S) -> Result<String, IconStoreGetError>
+    where
+        S: AsRef<str>,
+    {
+        self.icon_store.get_icon_b64(id)
+    }
+
     //
     // Getters
     //
