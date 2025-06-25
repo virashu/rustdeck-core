@@ -1,6 +1,6 @@
 use rustdeck_common::{
-    proto::Arg,
-    {actions, args, decl_action, decl_arg, decl_plugin, decl_variable, export_plugin, variables},
+    Args, actions, args, decl_action, decl_arg, decl_plugin, decl_variable, export_plugin,
+    variables,
 };
 
 struct PluginState {
@@ -21,11 +21,11 @@ fn get_variable(state: &PluginState, id: &str) -> String {
     }
 }
 
-fn run_action(state: &mut PluginState, id: &str, args: *const Arg) {
+fn run_action(state: &mut PluginState, id: &str, args: &Args) {
     match id {
         "add" => {
-            let amt = unsafe { args.as_ref().unwrap().i.as_ref().unwrap() };
-            state.counter += *amt;
+            let amt = args.get(0).int();
+            state.counter += amt;
         }
         "increment" => {
             state.counter += 1;

@@ -1,8 +1,5 @@
 use obws::Client;
-use rustdeck_common::{
-    proto::Arg,
-    {decl_plugin, decl_variable, export_plugin, variables},
-};
+use rustdeck_common::{Args, decl_plugin, decl_variable, export_plugin, variables};
 
 struct PluginState {
     rt: tokio::runtime::Runtime,
@@ -35,7 +32,7 @@ fn get_variable(state: &PluginState, id: &str) -> String {
     String::new()
 }
 
-fn run_action(_: &PluginState, _: &str, _: *const Arg) {}
+fn run_action(_: &PluginState, _: &str, _: &Args) {}
 
 export_plugin! {
     decl_plugin! {

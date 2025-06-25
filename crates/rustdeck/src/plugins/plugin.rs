@@ -1,75 +1,17 @@
-use libloading::Library;
-
 use std::{
-    ffi::{CStr, CString, OsStr, c_char, c_void},
+    ffi::{CString, OsStr, c_char, c_void},
     fmt::Debug,
     mem::ManuallyDrop,
 };
 
+use libloading::Library;
 use rustdeck_common::{
     proto::{Arg, BuildFn, Plugin as FFIPlugin},
     util,
 };
 
-use crate::constants::DECK_ACTION_ID;
-
-use super::error::PluginLoadError;
-
-unsafe fn read_drop_pointer(ptr: *mut c_char) -> String {
-    if ptr.is_null() {
-        return String::new();
-    }
-
-    let c_str: &CStr = unsafe { CStr::from_ptr(ptr) };
-    let str_slice: &str = c_str.to_str().unwrap();
-    let string = str_slice.to_owned();
-
-    unsafe { std::ptr::drop_in_place(ptr) };
-
-    string
-}
-
-#[derive(Clone)]
-pub enum PluginDataType {
-    Bool,
-    Int,
-    Float,
-    String,
-    Enum,
-}
-
-impl TryFrom<i32> for PluginDataType {
-    type Error = PluginLoadError;
-
-    fn try_from(value: i32) -> Result<Self, Self::Error> {
-        match value {
-            0 => Ok(Self::Bool),
-            1 => Ok(Self::Int),
-            2 => Ok(Self::Float),
-            3 => Ok(Self::String),
-            4 => Ok(Self::Enum),
-            _ => Err(PluginLoadError::FormatError(format!(
-                "No plugin data type with index '{value}'"
-            ))),
-        }
-    }
-}
-
-impl std::fmt::Display for PluginDataType {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(
-            f,
-            "{}",
-            match self {
-                Self::Bool => "bool",
-                Self::Int => "int",
-                Self::Float => "float",
-                Self::String => "string",
-                Self::Enum => "enum",
-            }
-        )
-    }
-}
+use super::{datatype::PluginDataType, error::PluginLoadError, util::read_drop_pointer};
+use crate::{constants::DECK_ACTION_ID, plugins::safe_arg::SafeArg};
 
 /// Args are positional
 #[derive(Clone)]
@@ -212,12 +154,15 @@ impl Plugin {
         unsafe { (self.inner.fn_update)(self.state) }
     }
 
-    pub fn run_action(&self, id: String, args: &[Arg]) {
+    pub fn run_action(&self, id: String, args: &[SafeArg]) {
         unsafe {
             (self.inner.fn_run_action)(
                 self.state,
                 CString::new(id).unwrap().as_ptr().cast::<c_char>(),
-                args.as_ptr(),
+                args.iter()
+                    .map(super::safe_arg::SafeArg::as_arg)
+                    .collect::<Vec<Arg>>()
+                    .as_ptr(),
             );
         }
     }
@@ -235,25 +180,24 @@ impl Plugin {
         }
     }
 
-    pub fn parse_args(proto: &Vec<ActionArg>, args: &[String]) -> Vec<Arg> {
+    pub fn parse_args(proto: &Vec<ActionArg>, args: &[String]) -> Vec<SafeArg> {
         args.iter()
             .zip(proto)
             .map(|(a, p)| match p.r#type {
-                PluginDataType::Bool => Arg {
-                    b: &(a.parse::<bool>().unwrap()),
-                },
-                PluginDataType::Int => Arg {
+                PluginDataType::Bool => SafeArg::Bool(Arg {
+                    b: Box::into_raw(Box::new(a.parse::<bool>().unwrap())),
+                }),
+                PluginDataType::Int => SafeArg::Int(Arg {
                     i: Box::into_raw(Box::new(a.parse::<i32>().unwrap())),
-                },
-                PluginDataType::Float => Arg {
+                }),
+                PluginDataType::Float => SafeArg::Float(Arg {
                     f: Box::into_raw(Box::new(a.parse::<f32>().unwrap())),
-                },
-                PluginDataType::String => Arg {
-                    // FIXME: Leak.
+                }),
+                PluginDataType::String => SafeArg::String(Arg {
                     c: ManuallyDrop::new(CString::new(a.clone()).unwrap())
                         .as_ptr()
                         .cast::<c_char>(),
-                },
+                }),
                 PluginDataType::Enum => todo!(),
             })
             .collect()

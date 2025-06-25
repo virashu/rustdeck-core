@@ -56,7 +56,8 @@ macro_rules! decl_plugin {
             ) {
                 let user_state = unsafe { &mut *state.cast() };
                 let id = unsafe { ::std::ffi::CStr::from_ptr(id).to_str().unwrap() };
-                ($user_fn_run_action)(user_state, id, args);
+                let args = $crate::Args::from(args);
+                ($user_fn_run_action)(user_state, id, &args);
             }
 
             ::std::boxed::Box::into_raw(::std::boxed::Box::new($crate::proto::Plugin {

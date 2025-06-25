@@ -1,7 +1,6 @@
 use media_session::{MediaSession, traits::MediaSessionControls};
 use rustdeck_common::{
-    proto::Arg,
-    {actions, decl_action, decl_plugin, decl_variable, export_plugin, variables},
+    Args, actions, decl_action, decl_plugin, decl_variable, export_plugin, variables,
 };
 
 struct PluginState {
@@ -16,7 +15,7 @@ fn init() -> PluginState {
 
 fn update(_: &mut PluginState) {}
 
-fn run_action(state: &PluginState, id: &str, _: *const Arg) {
+fn run_action(state: &PluginState, id: &str, _: &Args) {
     _ = match id {
         "play_pause" => state.player.toggle_pause(),
         "play" => state.player.play(),

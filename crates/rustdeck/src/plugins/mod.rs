@@ -1,8 +1,11 @@
+mod datatype;
 mod error;
 mod loading;
-mod plugin_wrapper;
+mod plugin;
+mod safe_arg;
 mod store;
+mod util;
 
 pub use loading::load_plugins_at;
-pub use plugin_wrapper::Plugin;
+pub use plugin::Plugin;
 pub use store::PluginStore;
