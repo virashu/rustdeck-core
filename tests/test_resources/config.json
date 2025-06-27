@@ -7,7 +7,8 @@
     "test_icon": "test_icon.png",
     "pause": "pause.png",
     "forward": "forward.png",
-    "back": "back.png"
+    "back": "back.png",
+    "animated": "animated.gif"
   },
   "screens": [
     {
@@ -77,6 +78,19 @@
           "template": "",
           "on_click_action": null,
           "icon": "test_icon"
+        },
+        {
+          "position": {
+            "x": 5,
+            "y": 2
+          },
+          "style": {
+            "text_align": "center",
+            "text_size": 24
+          },
+          "template": "",
+          "on_click_action": null,
+          "icon": "animated"
         },
         {
           "position": {
