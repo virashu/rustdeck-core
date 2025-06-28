@@ -19,6 +19,12 @@ update(void* state)
 char*
 get_variable(void* state, const char* id)
 {
+  if (!strcmp(id, "a")) {
+    return strdup("Value of variable A");
+  } else if (!strcmp(id, "b")) {
+    return strdup("Value of variable B");
+  }
+
   return NULL;
 }
 
@@ -44,10 +50,12 @@ const Plugin somePlugin = {
       &(Action){ .id = "test_action",
                  .name = "Test Action",
                  .desc = "A test action",
-                 .args = (const ActionArg*[]){ &(ActionArg){ .name = "Arg #1",
-                                                             .desc = "A test argument for action",
-                                                             .type = String },
-                                               NULL } },
+                 .args =
+                   (const ActionArg*[]){
+                     &(ActionArg){ .name = "Arg #1",
+                                   .desc = "A test argument for action",
+                                   .type = String },
+                     NULL } },
       NULL },
   .fn_init = &init,
   .fn_update = &update,
