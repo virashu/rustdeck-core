@@ -20,9 +20,9 @@ char*
 get_variable(void* state, const char* id)
 {
   if (!strcmp(id, "a")) {
-    return strdup("Value of variable A");
+    return _strdup("Value of variable A");
   } else if (!strcmp(id, "b")) {
-    return strdup("Value of variable B");
+    return _strdup("Value of variable B");
   }
 
   return NULL;

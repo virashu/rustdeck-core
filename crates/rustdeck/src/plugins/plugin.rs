@@ -223,13 +223,8 @@ impl Plugin {
             );
             let res = try_ptr_to_str(res_ptr).unwrap().to_owned();
 
-            // FIXME: Memory Leak. Free the pointer memory here
             self.free(res_ptr);
 
-            #[allow(
-                clippy::let_and_return,
-                reason = "WIP: Need deallocation between to_owned and return"
-            )]
             res
         }
     }
