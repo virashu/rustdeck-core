@@ -1,5 +1,6 @@
 use rustdeck_common::{
-    Args, actions, decl_action, decl_plugin, decl_variable, export_plugin, variables,
+    Args, actions, args, decl_action, decl_arg, decl_plugin, decl_variable, export_plugin,
+    variables,
 };
 
 struct PluginState {
@@ -34,22 +35,30 @@ fn get_variable(state: &PluginState, id: &str) -> String {
     }
 }
 
-fn run_action(state: &PluginState, id: &str, _: &Args) {
-    if id == "toggle_filter" {
-        state.rt.block_on(async {
-            let filters = state.client.filters();
-            let cur = filters.get("Display".into(), "blur").await.unwrap().enabled;
-            filters
-                .set_enabled(obws::requests::filters::SetEnabled {
-                    source: "Display".into(),
-                    filter: "blur",
-                    enabled: !cur,
-                })
-                .await
-                .unwrap();
-        });
-    } else {
-        unreachable!()
+fn run_action(state: &PluginState, id: &str, args: &Args) {
+    match id {
+        "toggle_filter" => {
+            state.rt.block_on(async {
+                let filters = state.client.filters();
+                let cur = filters.get("Display".into(), "blur").await.unwrap().enabled;
+                _ = filters
+                    .set_enabled(obws::requests::filters::SetEnabled {
+                        source: "Display".into(),
+                        filter: "blur",
+                        enabled: !cur,
+                    })
+                    .await;
+            });
+        }
+        "switch_scene" => {
+            state.rt.block_on(async {
+                _ = state
+                    .client
+                    .scenes()
+                    .set_current_program_scene(args.get(0).string());
+            });
+        }
+        _ => unreachable!(),
     }
 }
 
@@ -62,6 +71,19 @@ fn get_enum(state: &PluginState, id: &str) -> String {
         "toggle_filter.filter" => state.rt.block_on(async {
             state.client.filters();
             String::new()
+        }),
+        "switch_scene.scene" => state.rt.block_on(async {
+            state
+                .client
+                .scenes()
+                .list()
+                .await
+                .unwrap()
+                .scenes
+                .iter()
+                .map(|s| s.id.name.clone())
+                .collect::<Vec<String>>()
+                .join("\n")
         }),
         _ => unreachable!(),
     }
@@ -87,6 +109,19 @@ export_plugin! {
                 name: "Toggle blur filter",
                 desc: "",
             },
+            decl_action! {
+                id: "switch_scene",
+                name: "Switch scene",
+                desc: "",
+                args: args!(
+                    decl_arg! {
+                        id: "scene",
+                        name: "To",
+                        desc: "Destination scene",
+                        vtype: "enum",
+                    }
+                ),
+            }
         ),
 
         fn_init: init,
