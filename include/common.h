@@ -30,6 +30,7 @@ typedef union
 
 typedef struct
 {
+  const char* id;
   const char* name;
   const char* desc;
   const enum Type type;
@@ -62,6 +63,8 @@ typedef struct
   void (*fn_update)(void* state);
   char* (*fn_get_variable)(void* state, const char* id);
   void (*fn_run_action)(void* state, const char* id, const Arg* args);
+
+  char* (**fn_get_enum)(void* state, const char* id);
 } Plugin;
 
 EXPORT

@@ -22,4 +22,5 @@ tracing-subscriber = "0.3.19"
 [features]
 default = ["icon_store_b64"]
 icon_store_b64 = ["dep:base64"]
+# Enables storing plugins and icons local to executable, instead of current working directory (cwd)
 portable = []

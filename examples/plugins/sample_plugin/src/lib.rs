@@ -61,6 +61,7 @@ export_plugin! {
                 desc: "Add value to counter",
                 args: args!(
                     decl_arg! {
+                        id: "amount",
                         name: "Amount",
                         desc: "Amount",
                         vtype: "int",

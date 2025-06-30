@@ -65,9 +65,10 @@ impl Deck {
                     name: String::from("Switch screen"),
                     description: String::new(),
                     args: vec![PluginActionArgsData {
+                        id: String::from("deck.switch_screen.destination"),
                         name: String::from("To "),
                         description: String::from("Screen to switch to"),
-                        r#type: String::from("string"),
+                        r#type: String::from("enum"),
                     }],
                 }],
             },
@@ -373,6 +374,17 @@ impl Deck {
 
         {
             self.save_config();
+        }
+    }
+
+    pub fn get_enum_arg_variants(&self, id: String) -> Vec<String> {
+        if id.starts_with(DECK_ACTION_PREFIX) {
+            match id.as_str() {
+                "deck.switch_screen.destination" => self.screens.read().keys().cloned().collect(),
+                _ => unreachable!(),
+            }
+        } else {
+            self.plugin_store.get_enum_arg_variants(id)
         }
     }
 

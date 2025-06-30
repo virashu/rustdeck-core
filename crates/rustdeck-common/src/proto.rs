@@ -10,6 +10,7 @@ pub union Arg {
 
 #[repr(C)]
 pub struct ActionArg {
+    pub id: *const c_char,
     pub name: *const c_char,
     pub desc: *const c_char,
     pub r#type: i32,
@@ -44,6 +45,9 @@ pub struct Plugin {
     pub fn_get_variable: unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> *mut c_char,
     pub fn_run_action:
         unsafe extern "C" fn(state: *mut c_void, id: *const c_char, args: *const Arg),
+
+    pub fn_get_enum:
+        *const unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> *mut c_char,
 }
 
 pub type BuildFn = unsafe extern "C" fn() -> *const Plugin;

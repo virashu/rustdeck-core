@@ -1,6 +1,5 @@
 use std::{
     ffi::{CStr, CString, c_char},
-    mem::ManuallyDrop,
     str::Utf8Error,
 };
 
@@ -45,6 +44,5 @@ pub unsafe fn try_ptr_to_str<'a>(ptr: *const c_char) -> Result<&'a str, PtrToStr
 /// # Panics
 /// Panics if supplied string has any 0-bytes.
 pub fn str_to_ptr(s: impl AsRef<str>) -> *const c_char {
-    let p = ManuallyDrop::new(CString::new(s.as_ref()));
-    p.as_ref().unwrap().as_ptr()
+    CString::new(s.as_ref()).unwrap().into_raw().cast_const()
 }

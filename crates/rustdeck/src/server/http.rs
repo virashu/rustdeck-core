@@ -187,6 +187,13 @@ async fn list_icons(State(state): State<AxumState>) -> Json<Vec<String>> {
     Json(state.deck.get_all_icons())
 }
 
+async fn gt_enum_arg_variants(
+    State(state): State<AxumState>,
+    Path(id): Path<String>,
+) -> Json<Vec<String>> {
+    Json(state.deck.get_enum_arg_variants(id))
+}
+
 async fn build_and_run<S>(deck_ref: Arc<Deck>, host: S, port: u32)
 where
     S: AsRef<str>,
@@ -242,6 +249,10 @@ where
                 .post(handle_switch_screen)
                 .patch(rename_screen)
                 .delete(delete_screen),
+        )
+        .route(
+            "/api/config/get_enum_arg_variants/{id}",
+            get(gt_enum_arg_variants),
         )
         .with_state(state)
         .layer(cors)

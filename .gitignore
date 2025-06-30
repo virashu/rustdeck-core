@@ -7,3 +7,7 @@ dist/
 /plugins/
 /icons/
 /config.json
+
+cpploader/
+a.exe
+a.out

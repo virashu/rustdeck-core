@@ -53,6 +53,20 @@ fn run_action(state: &PluginState, id: &str, _: &Args) {
     }
 }
 
+fn get_enum(state: &PluginState, id: &str) -> String {
+    match id {
+        "toggle_filter.source" => state.rt.block_on(async {
+            state.client.sources();
+            String::new()
+        }),
+        "toggle_filter.filter" => state.rt.block_on(async {
+            state.client.filters();
+            String::new()
+        }),
+        _ => unreachable!(),
+    }
+}
+
 export_plugin! {
     decl_plugin! {
         id: "rustdeck_obs",
@@ -79,5 +93,7 @@ export_plugin! {
         fn_update: update,
         fn_get_variable: get_variable,
         fn_run_action: run_action,
+
+        fn_get_enum: get_enum,
     }
 }

@@ -72,6 +72,10 @@ impl PluginStore {
             .split_once('.')
             .ok_or_else(|| ActionError::InvalidFormat(act.id.clone()))?;
 
+        if plug_id.is_empty() || act_id.is_empty() {
+            return Err(ActionError::InvalidFormat(act.id.clone()));
+        }
+
         {
             let plugin = self
                 .plugins
@@ -143,6 +147,7 @@ impl PluginStore {
                     .iter()
                     .cloned()
                     .map(|a| PluginActionArgsData {
+                        id: format!("{}.{}.{}", plugin.id, act.id, a.id),
                         name: a.name,
                         description: a.description,
                         r#type: a.r#type.to_string(),
@@ -196,5 +201,22 @@ impl PluginStore {
                 }
             })
             .collect()
+    }
+
+    #[allow(clippy::needless_pass_by_value)]
+    pub fn get_enum_arg_variants(&self, id: String) -> Vec<String> {
+        #[allow(clippy::expect_fun_call)]
+        let (plug_id, act_id) = id
+            .split_once('.')
+            .expect(format!("Invalid arg id format: {id}").as_str());
+
+        let plugin = self
+            .plugins
+            .get(plug_id)
+            .expect("Failed to find plugin")
+            .read()
+            .unwrap();
+
+        plugin.get_enum_arg(act_id)
     }
 }

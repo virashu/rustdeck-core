@@ -26,7 +26,9 @@ macro_rules! decl_plugin {
         fn_init: $user_fn_init:expr,
         fn_update: $user_fn_update:expr,
         fn_get_variable: $user_fn_get_variable:expr,
-        fn_run_action: $user_fn_run_action:expr
+        fn_run_action: $user_fn_run_action:expr,
+
+        __fn_get_enum: $user_fn_get_enum:expr
 
         $(,)?
     ) => {
@@ -44,9 +46,9 @@ macro_rules! decl_plugin {
                 state: *mut ::std::ffi::c_void,
                 id: *const ::std::ffi::c_char,
             ) -> *mut ::std::ffi::c_char {
-                let user_state = unsafe { &mut *state.cast() };
-                let id = unsafe { ::std::ffi::CStr::from_ptr(id).to_str().unwrap() };
-                let res = ($user_fn_get_variable)(user_state, id);
+                let state = unsafe { &mut *state.cast() };
+                let id = $crate::util::ptr_to_str(id);
+                let res = ($user_fn_get_variable)(state, id);
 
                 return (*::std::mem::ManuallyDrop::new(::std::boxed::Box::new(
                     ::std::ffi::CString::new(res).unwrap(),
@@ -76,7 +78,86 @@ macro_rules! decl_plugin {
                 fn_update: fn_update,
                 fn_get_variable: fn_get_variable,
                 fn_run_action: fn_run_action,
+
+                fn_get_enum: $user_fn_get_enum,
             })) as *const $crate::proto::Plugin
+        }
+    };
+
+    /* Without `fn_get_enum` */
+    (
+        id: $id:literal,
+        name: $name:literal,
+        desc: $desc:literal,
+        variables: $variables:expr,
+        actions: $actions:expr,
+
+        fn_init: $user_fn_init:expr,
+        fn_update: $user_fn_update:expr,
+        fn_get_variable: $user_fn_get_variable:expr,
+        fn_run_action: $user_fn_run_action:expr
+
+        $(,)?
+    ) => {
+        decl_plugin! {
+            id: $id,
+            name: $name,
+            desc: $desc,
+            variables: $variables,
+            actions: $actions,
+            fn_init: $user_fn_init,
+            fn_update: $user_fn_update,
+            fn_get_variable: $user_fn_get_variable,
+            fn_run_action: $user_fn_run_action,
+            __fn_get_enum: ::std::ptr::null(),
+        }
+    };
+
+    /* With `fn_get_enum` */
+    (
+        id: $id:literal,
+        name: $name:literal,
+        desc: $desc:literal,
+        variables: $variables:expr,
+        actions: $actions:expr,
+
+        fn_init: $user_fn_init:expr,
+        fn_update: $user_fn_update:expr,
+        fn_get_variable: $user_fn_get_variable:expr,
+        fn_run_action: $user_fn_run_action:expr,
+
+        fn_get_enum: $user_fn_get_enum:expr
+
+        $(,)?
+    ) => {
+        unsafe {
+            unsafe extern "C" fn __get_enum(
+                state: *mut ::std::ffi::c_void,
+                id: *const ::std::ffi::c_char,
+            ) -> *mut ::std::ffi::c_char {
+                let state = unsafe { &mut *state.cast() };
+                let id = $crate::util::ptr_to_str(id);
+                let res = ($user_fn_get_enum)(state, id);
+                ::std::ffi::CString::new(res).unwrap().into_raw()
+            }
+
+            let fn_get_enum_p = Box::into_raw(Box::new(
+                __get_enum as unsafe extern "C" fn(*mut std::ffi::c_void, *const i8) -> *mut i8,
+            ))
+            .cast_const();
+
+            decl_plugin! {
+                id: $id,
+                name: $name,
+                desc: $desc,
+                variables: $variables,
+                actions: $actions,
+                fn_init: $user_fn_init,
+                fn_update: $user_fn_update,
+                fn_get_variable: $user_fn_get_variable,
+                fn_run_action: $user_fn_run_action,
+                __fn_get_enum: fn_get_enum_p,
+            }
         }
     };
 
@@ -258,12 +339,14 @@ macro_rules! args {
 #[macro_export]
 macro_rules! decl_arg {
     (
+        id: $id:literal,
         name: $name:literal,
         desc: $desc:literal,
         vtype: $vtype:literal
         $(,)?
     ) => {
         ::std::boxed::Box::into_raw(::std::boxed::Box::new($crate::proto::ActionArg {
+            id: $crate::util::str_to_ptr($id),
             name: $crate::util::str_to_ptr($name),
             desc: $crate::util::str_to_ptr($desc),
             r#type: $crate::Type::try_from($vtype)

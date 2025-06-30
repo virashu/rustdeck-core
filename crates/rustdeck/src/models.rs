@@ -2,6 +2,7 @@ use serde::Serialize;
 
 #[derive(Serialize, Clone)]
 pub struct PluginActionArgsData {
+    pub id: String,
     pub name: String,
     pub description: String,
     pub r#type: String,

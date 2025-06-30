@@ -8,8 +8,7 @@ vars:
   builtin_plugins: |
     rustdeck-media
     rustdeck-system
-
-  # rustdeck-obs # unstable
+    rustdeck-obs
 
 tasks:
   mkdir:

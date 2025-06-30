@@ -3,6 +3,7 @@ pub enum Type {
     Int,
     Float,
     String,
+    Enum,
 }
 
 impl From<Type> for i32 {
@@ -12,6 +13,7 @@ impl From<Type> for i32 {
             Type::Int => 1,
             Type::Float => 2,
             Type::String => 3,
+            Type::Enum => 4,
         }
     }
 }
@@ -39,6 +41,7 @@ impl TryFrom<&str> for Type {
             "int" => Self::Int,
             "float" => Self::Float,
             "string" => Self::String,
+            "enum" => Self::Enum,
             _ => panic!("Invalid type value"),
         })
     }

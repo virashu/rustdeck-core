@@ -52,7 +52,8 @@ const Plugin somePlugin = {
                  .desc = "A test action",
                  .args =
                    (const ActionArg*[]){
-                     &(ActionArg){ .name = "Arg #1",
+                     &(ActionArg){ .id = "arg_1",
+                                   .name = "Arg #1",
                                    .desc = "A test argument for action",
                                    .type = String },
                      NULL } },
@@ -61,6 +62,8 @@ const Plugin somePlugin = {
   .fn_update = &update,
   .fn_get_variable = &get_variable,
   .fn_run_action = &run_action,
+
+  .fn_get_enum = NULL,
 };
 
 EXPORT

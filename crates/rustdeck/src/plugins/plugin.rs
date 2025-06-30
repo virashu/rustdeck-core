@@ -19,6 +19,7 @@ use crate::{
 /// Args are positional
 #[derive(Clone)]
 pub struct ActionArg {
+    pub id: String,
     pub name: String,
     pub description: String,
     pub r#type: PluginDataType,
@@ -133,6 +134,7 @@ impl Plugin {
                             act.args.offset(args_offset).as_ref().unwrap().as_ref()
                         {
                             args.push(ActionArg {
+                                id: util::try_ptr_to_str(arg.id)?.to_owned(),
                                 name: util::try_ptr_to_str(arg.name)?.to_owned(),
                                 description: util::try_ptr_to_str(arg.desc)?.to_owned(),
                                 r#type: arg.r#type.try_into()?,
@@ -262,6 +264,24 @@ impl Plugin {
 
         Ok(parsed)
     }
+
+    pub fn get_enum_arg<T>(&self, id: T) -> Vec<String>
+    where
+        T: AsRef<str>,
+    {
+        let res_ptr = unsafe {
+            (self.inner.fn_get_enum.as_ref().unwrap())(
+                self.state,
+                CString::new(id.as_ref()).unwrap().as_ptr().cast::<c_char>(),
+            )
+        };
+
+        let res = unsafe { try_ptr_to_str(res_ptr).unwrap().to_owned() };
+
+        self.free(res_ptr);
+
+        res.split('\n').map(ToOwned::to_owned).collect()
+    }
 }
 
 unsafe impl Send for Plugin {}
@@ -334,6 +354,7 @@ mod tests {
                     desc: "Add",
                     args: args!(
                         decl_arg! {
+                            id: "amount",
                             name: "Amount",
                             desc: "Amount",
                             vtype: "int",
@@ -346,6 +367,7 @@ mod tests {
                     desc: "Print",
                     args: args!(
                         decl_arg! {
+                            id: "string",
                             name: "String",
                             desc: "String",
                             vtype: "string",
