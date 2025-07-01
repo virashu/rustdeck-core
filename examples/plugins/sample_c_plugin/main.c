@@ -36,28 +36,43 @@ run_action(void* state, const char* id, const Arg* args)
   }
 }
 
+// clang-format off
 const Plugin somePlugin = {
   .id = "test_plugin_c",
   .name = "C Sample Plugin",
   .desc = "A sample plugin written in C",
-  .variables =
-    (const Variable*[]){
-      &(Variable){ .id = "a", .desc = "A Variable", .type = Int },
-      &(Variable){ .id = "b", .desc = "B Variable", .type = Float },
-      NULL },
-  .actions =
-    (const Action*[]){
-      &(Action){ .id = "test_action",
-                 .name = "Test Action",
-                 .desc = "A test action",
-                 .args =
-                   (const ActionArg*[]){
-                     &(ActionArg){ .id = "arg_1",
-                                   .name = "Arg #1",
-                                   .desc = "A test argument for action",
-                                   .type = String },
-                     NULL } },
-      NULL },
+
+  .variables = (const Variable*[]){
+    &(Variable){
+      .id = "a",
+      .desc = "A Variable",
+      .type = Int
+    },
+    &(Variable){
+      .id = "b",
+      .desc = "B Variable",
+      .type = Float
+    },
+    NULL
+  },
+  .actions = (const Action*[]){
+    &(Action){
+      .id = "test_action",
+      .name = "Test Action",
+      .desc = "A test action",
+      .args = (const ActionArg*[]){
+        &(ActionArg){
+          .id = "arg_1",
+          .name = "Arg #1",
+          .desc = "A test argument for action",
+          .type = String
+        },
+        NULL
+      }
+    },
+    NULL
+  },
+
   .fn_init = &init,
   .fn_update = &update,
   .fn_get_variable = &get_variable,
@@ -65,6 +80,7 @@ const Plugin somePlugin = {
 
   .fn_get_enum = NULL,
 };
+// clang-format on
 
 EXPORT
 const Plugin*
