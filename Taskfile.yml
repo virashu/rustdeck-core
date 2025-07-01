@@ -103,3 +103,11 @@ tasks:
     deps: [mock_config]
     cmds:
       - cargo run --package rustdeck
+
+  run:
+    deps:
+      - build_example_plugin
+      - build_example_c_plugin
+      - task: build_builtin_plugins
+    cmds:
+      - cargo run --package rustdeck

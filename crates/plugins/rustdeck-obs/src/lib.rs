@@ -37,15 +37,24 @@ fn get_variable(state: &PluginState, id: &str) -> String {
 
 fn run_action(state: &PluginState, id: &str, args: &Args) {
     match id {
-        "toggle_filter" => {
+        "set_filter" => {
             state.rt.block_on(async {
+                let source_string = args.get(0).string().to_owned();
+                let source = source_string.as_str().into();
+                let filter = args.get(1).string().to_owned();
+
                 let filters = state.client.filters();
-                let cur = filters.get("Display".into(), "blur").await.unwrap().enabled;
+                let enabled = match args.get(2).string() {
+                    "on" => true,
+                    "off" => false,
+                    "toggle" => !filters.get(source, &filter).await.unwrap().enabled,
+                    _ => unreachable!(),
+                };
                 _ = filters
                     .set_enabled(obws::requests::filters::SetEnabled {
-                        source: "Display".into(),
-                        filter: "blur",
-                        enabled: !cur,
+                        source,
+                        filter: &filter,
+                        enabled,
                     })
                     .await;
             });
@@ -55,7 +64,8 @@ fn run_action(state: &PluginState, id: &str, args: &Args) {
                 _ = state
                     .client
                     .scenes()
-                    .set_current_program_scene(args.get(0).string());
+                    .set_current_program_scene(args.get(0).string())
+                    .await;
             });
         }
         _ => unreachable!(),
@@ -64,14 +74,15 @@ fn run_action(state: &PluginState, id: &str, args: &Args) {
 
 fn get_enum(state: &PluginState, id: &str) -> String {
     match id {
-        "toggle_filter.source" => state.rt.block_on(async {
+        "set_filter.source" => state.rt.block_on(async {
             state.client.sources();
             String::new()
         }),
-        "toggle_filter.filter" => state.rt.block_on(async {
+        "set_filter.filter" => state.rt.block_on(async {
             state.client.filters();
             String::new()
         }),
+        "set_filter.action" => String::from("on\noff\ntoggle"),
         "switch_scene.scene" => state.rt.block_on(async {
             state
                 .client
@@ -105,9 +116,29 @@ export_plugin! {
 
         actions: actions!(
             decl_action! {
-                id: "toggle_filter",
-                name: "Toggle blur filter",
+                id: "set_filter",
+                name: "Set filter state",
                 desc: "",
+                args: args!(
+                    decl_arg! {
+                        id: "source",
+                        name: "Source",
+                        desc: "The name of the source",
+                        vtype: "string",
+                    },
+                    decl_arg! {
+                        id: "filter",
+                        name: "Filter",
+                        desc: "The name of the filter",
+                        vtype: "string",
+                    },
+                    decl_arg! {
+                        id: "action",
+                        name: "State",
+                        desc: "",
+                        vtype: "enum",
+                    },
+                ),
             },
             decl_action! {
                 id: "switch_scene",
@@ -119,9 +150,9 @@ export_plugin! {
                         name: "To",
                         desc: "Destination scene",
                         vtype: "enum",
-                    }
+                    },
                 ),
-            }
+            },
         ),
 
         fn_init: init,

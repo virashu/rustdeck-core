@@ -29,6 +29,12 @@ A plugin struct should have:
 - `fn_run_action` -- pointer to function, that takes _state_, _id_ (`const char*`) of an action and an array of [Arg](#arg) (`const Arg*`) \
   Length of arg array guaranteed to be of required length, and guaranteed to have types provided in declaration of action.
 
-## Types
+## Data types (`r#type`/`vtype` fields)
 
-### Arg
+- `bool`
+- `int`
+- `float`
+- `string`
+- `enum` -- a special case of `string` for arguments that should have limited options (for example, `on`/`off`, or available scenes).
+  Options are queried from plugin using `fn_get_enum` by id in format `<action id>.<arg id>`.
+  The function should return string with options separated by _newline_ (`\n`).

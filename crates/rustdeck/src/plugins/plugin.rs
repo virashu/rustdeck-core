@@ -257,7 +257,11 @@ impl Plugin {
                         .as_ptr()
                         .cast::<c_char>(),
                 }),
-                PluginDataType::Enum => todo!(),
+                PluginDataType::Enum => SafeArg::String(Arg {
+                    c: ManuallyDrop::new(CString::new(arg_str.clone())?)
+                        .as_ptr()
+                        .cast::<c_char>(),
+                }),
             };
             parsed.push(arg);
         }
