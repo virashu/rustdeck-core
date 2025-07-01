@@ -14,7 +14,7 @@ fn init() -> PluginState {
         .build()
         .unwrap();
     let client = rt
-        .block_on(obws::Client::connect("localhost", 4455, Some("")))
+        .block_on(obws::Client::connect("localhost", 4455, Some("aaaaaa")))
         .unwrap();
 
     PluginState { rt, client }
@@ -74,10 +74,29 @@ fn run_action(state: &PluginState, id: &str, args: &Args) {
 
 fn get_enum(state: &PluginState, id: &str) -> String {
     match id {
-        "set_filter.source" => state.rt.block_on(async {
-            state.client.sources();
-            String::new()
-        }),
+        "set_filter.source" => {
+            let scenes = state
+                .rt
+                .block_on(async { state.client.scenes().list().await.unwrap() });
+
+            scenes
+                .scenes
+                .iter()
+                .flat_map(|scene| {
+                    state
+                        .rt
+                        .block_on(
+                            state
+                                .client
+                                .scene_items()
+                                .list(scene.id.name.as_str().into()),
+                        )
+                        .unwrap()
+                })
+                .map(|item| item.source_name)
+                .collect::<Vec<String>>()
+                .join("\n")
+        }
         "set_filter.filter" => state.rt.block_on(async {
             state.client.filters();
             String::new()
@@ -92,6 +111,7 @@ fn get_enum(state: &PluginState, id: &str) -> String {
                 .unwrap()
                 .scenes
                 .iter()
+                .rev() // NOTE: The order of OBS scenes is reversed (from bottom to top), so they need a reverse
                 .map(|s| s.id.name.clone())
                 .collect::<Vec<String>>()
                 .join("\n")
@@ -124,7 +144,7 @@ export_plugin! {
                         id: "source",
                         name: "Source",
                         desc: "The name of the source",
-                        vtype: "string",
+                        vtype: "enum",
                     },
                     decl_arg! {
                         id: "filter",
