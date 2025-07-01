@@ -35,7 +35,7 @@ fn get_variable(_: &(), id: &str) -> String {
             let time = get_time();
             let minutes = (time / 60) % 60;
             let hours = (time / 3600) % 24;
-            format!("{hours}:{minutes}")
+            format!("{hours}:{minutes:02}")
         }
         _ => unreachable!(),
     }
