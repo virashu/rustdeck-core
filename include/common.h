@@ -11,6 +11,11 @@
 #define EXPORT
 #endif // _WIN32
 
+typedef struct {
+  int status;
+  void* content;
+} Result;
+
 enum Type
 {
   Bool,
@@ -59,9 +64,9 @@ typedef struct
   const Variable* const* variables;
   const Action* const* actions;
 
-  void* (*fn_init)(void);
+  Result (*fn_init)(void);
   void (*fn_update)(void* state);
-  char* (*fn_get_variable)(void* state, const char* id);
+  Result (*fn_get_variable)(void* state, const char* id);
   void (*fn_run_action)(void* state, const char* id, const Arg* args);
 
   char* (**fn_get_enum)(void* state, const char* id);

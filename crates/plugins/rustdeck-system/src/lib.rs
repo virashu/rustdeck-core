@@ -1,11 +1,14 @@
 #![allow(clippy::trivially_copy_pass_by_ref, reason = "unit used as state")]
+#![allow(clippy::unnecessary_wraps)]
 
 use rustdeck_common::{
     Args, actions, decl_action, decl_plugin, decl_variable, export_plugin, variables,
 };
 use system_shutdown::{reboot, shutdown};
 
-const fn init() {}
+const fn init() -> Result<(), Box<dyn std::error::Error>> {
+    Ok(())
+}
 
 const fn update(_: &()) {}
 
@@ -30,8 +33,8 @@ fn get_time() -> i64 {
     timestamp + offset_in_sec
 }
 
-fn get_variable(_: &(), id: &str) -> String {
-    match id {
+fn get_variable(_: &(), id: &str) -> Result<String, String> {
+    Ok(match id {
         "time_hours" => ((get_time() / 3600) % 24).to_string(),
         "time_minutes" => ((get_time() / 60) % 60).to_string(),
         "time" => {
@@ -41,7 +44,7 @@ fn get_variable(_: &(), id: &str) -> String {
             format!("{hours}:{minutes:02}")
         }
         _ => unreachable!(),
-    }
+    })
 }
 
 export_plugin! {

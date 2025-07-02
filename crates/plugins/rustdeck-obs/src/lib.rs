@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_wraps)]
+
 use rustdeck_common::{
     Args, actions, args, decl_action, decl_arg, decl_plugin, decl_variable, export_plugin,
     variables,
@@ -8,54 +10,41 @@ struct PluginState {
     client: obws::Client,
 }
 
-fn init() -> PluginState {
+fn init() -> Result<PluginState, Box<dyn std::error::Error>> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
-        .build()
-        .unwrap();
-    let client = rt
-        .block_on(obws::Client::connect("localhost", 4455, Some("aaaaaa")))
-        .unwrap();
+        .build()?;
+    let client = rt.block_on(obws::Client::connect("localhost", 4455, Some("aaaaaa")))?;
 
-    PluginState { rt, client }
+    Ok(PluginState { rt, client })
 }
 
 fn update(_: &PluginState) {}
 
-fn get_variable(state: &PluginState, id: &str) -> String {
-    match id {
+fn get_variable(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(match id {
         "scene" => {
             state
                 .rt
-                .block_on(state.client.scenes().current_program_scene())
-                .unwrap()
+                .block_on(state.client.scenes().current_program_scene())?
                 .id
                 .name
         }
-        "profile" => state
-            .rt
-            .block_on(state.client.profiles().current())
-            .unwrap(),
+        "profile" => state.rt.block_on(state.client.profiles().current())?,
         "is_streaming" => state
             .rt
-            .block_on(state.client.streaming().status())
-            .unwrap()
+            .block_on(state.client.streaming().status())?
             .active
             .to_string(),
         "streaming_state" => {
-            if state
-                .rt
-                .block_on(state.client.streaming().status())
-                .unwrap()
-                .active
-            {
+            if state.rt.block_on(state.client.streaming().status())?.active {
                 "online".into()
             } else {
                 "offline".into()
             }
         }
         _ => unreachable!(),
-    }
+    })
 }
 
 #[allow(clippy::too_many_lines)]

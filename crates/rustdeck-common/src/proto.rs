@@ -1,6 +1,13 @@
 use std::ffi::{c_char, c_void};
 
 #[repr(C)]
+pub struct Result {
+    /// 0 = Ok, 1 = Error
+    pub status: i32,
+    pub content: *mut c_void,
+}
+
+#[repr(C)]
 pub union Arg {
     pub b: *const bool,
     pub i: *const i32,
@@ -40,9 +47,9 @@ pub struct Plugin {
     pub variables: *const *const Variable,
     pub actions: *const *const Action,
 
-    pub fn_init: unsafe extern "C" fn() -> *mut c_void,
+    pub fn_init: unsafe extern "C" fn() -> Result,
     pub fn_update: unsafe extern "C" fn(state: *mut c_void),
-    pub fn_get_variable: unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> *mut c_char,
+    pub fn_get_variable: unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> Result,
     pub fn_run_action:
         unsafe extern "C" fn(state: *mut c_void, id: *const c_char, args: *const Arg),
 

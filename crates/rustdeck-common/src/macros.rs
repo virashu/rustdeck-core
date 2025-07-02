@@ -33,10 +33,24 @@ macro_rules! decl_plugin {
         $(,)?
     ) => {
         unsafe {
-            unsafe extern "C" fn fn_init() -> *mut ::std::ffi::c_void {
-                let mut user_state = ($user_fn_init)();
-                let mut state = ::std::mem::ManuallyDrop::new(Box::new(user_state));
-                (&raw mut (**state)).cast()
+            unsafe extern "C" fn fn_init() -> $crate::proto::Result {
+                let mut user_state_res = ($user_fn_init)();
+                match user_state_res {
+                    Ok(state) => {
+                        let raw_state = ::std::boxed::Box::into_raw(::std::boxed::Box::new(state));
+                        $crate::proto::Result {
+                            status: 0,
+                            content: raw_state.cast(),
+                        }
+                    }
+                    Err(e) => $crate::proto::Result {
+                        status: 1,
+                        content: ::std::ffi::CString::new(e.to_string())
+                            .unwrap()
+                            .into_raw()
+                            .cast(),
+                    },
+                }
             }
             unsafe extern "C" fn fn_update(state: *mut ::std::ffi::c_void) {
                 let user_state = unsafe { &mut *state.cast() };
@@ -45,16 +59,24 @@ macro_rules! decl_plugin {
             unsafe extern "C" fn fn_get_variable(
                 state: *mut ::std::ffi::c_void,
                 id: *const ::std::ffi::c_char,
-            ) -> *mut ::std::ffi::c_char {
+            ) -> $crate::proto::Result {
                 let state = unsafe { &mut *state.cast() };
                 let id = $crate::util::ptr_to_str(id);
                 let res = ($user_fn_get_variable)(state, id);
 
-                return (*::std::mem::ManuallyDrop::new(::std::boxed::Box::new(
-                    ::std::ffi::CString::new(res).unwrap(),
-                )))
-                .as_ptr()
-                .cast_mut();
+                match res {
+                    Ok(value) => $crate::proto::Result {
+                        status: 0,
+                        content: ::std::ffi::CString::new(value).unwrap().into_raw().cast(),
+                    },
+                    Err(e) => $crate::proto::Result {
+                        status: 1,
+                        content: ::std::ffi::CString::new(e.to_string())
+                            .unwrap()
+                            .into_raw()
+                            .cast(),
+                    },
+                }
             }
             unsafe extern "C" fn fn_run_action(
                 state: *mut ::std::ffi::c_void,
@@ -141,8 +163,12 @@ macro_rules! decl_plugin {
                 ::std::ffi::CString::new(res).unwrap().into_raw()
             }
 
-            let fn_get_enum_p = Box::into_raw(Box::new(
-                __get_enum as unsafe extern "C" fn(*mut std::ffi::c_void, *const i8) -> *mut i8,
+            let fn_get_enum_p = ::std::boxed::Box::into_raw(::std::boxed::Box::new(
+                __get_enum
+                    as unsafe extern "C" fn(
+                        *mut ::std::ffi::c_void,
+                        *const ::std::ffi::c_char,
+                    ) -> *mut ::std::ffi::c_char,
             ))
             .cast_const();
 

@@ -4,10 +4,10 @@
 
 #include "../../../include/common.h"
 
-void*
+Result
 init()
 {
-  return NULL;
+  return (Result){ .status = 0 };
 }
 
 void
@@ -16,16 +16,16 @@ update(void* state)
   return;
 }
 
-char*
+Result
 get_variable(void* state, const char* id)
 {
   if (!strcmp(id, "a")) {
-    return strdup("Value of variable A");
+    return (Result){ .content = strdup("Value of variable A") };
   } else if (!strcmp(id, "b")) {
-    return strdup("Value of variable B");
+    return (Result){ .content = strdup("Value of variable B") };
   }
 
-  return NULL;
+  return (Result){ .status = 1 };
 }
 
 void

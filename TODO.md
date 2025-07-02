@@ -1,9 +1,11 @@
+- Validation for everything
+
 - Icons store
   - Endpoint to POST icons
-  - Option to package icons (icon packs/icons with plugin)
-- Validation for everything
-- Dynamic icons (updated by plugins; for example, cover of now playing media)
-- Transfer icons in Base64
-- Plugin config
-- Plugin pre-init (after install) config
-- Plugins' error handling
+  - Icon packs
+
+- Plugins
+  - Plugin config
+  - Plugin pre-init (after install) config
+  - Plugins' error handling
+  - Dynamic icons (updated by plugins; for example, cover of now playing media)

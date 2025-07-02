@@ -10,6 +10,8 @@ pub enum PluginLoadError {
     SymbolError(libloading::Error),
     /// Plugin build function returned a null pointer
     BuildError,
+    /// Initialization error
+    InitError(String),
     /// Other libloading errors
     GenericLibError(libloading::Error),
     /// Failed to read string
@@ -67,6 +69,7 @@ impl std::fmt::Display for PluginLoadError {
             Self::BuildError => write!(f, "Plugin build function returned a null pointer"),
             Self::ReadError(e) => write!(f, "Error reading from plugin: {e}"),
             Self::FormatError(e) => write!(f, "Plugin format error: {e}"),
+            Self::InitError(e) => write!(f, "Initialization error: {e}"),
         }
     }
 }

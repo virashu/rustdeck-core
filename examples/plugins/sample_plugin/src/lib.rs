@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_wraps)]
+
 use rustdeck_common::{
     Args, actions, args, decl_action, decl_arg, decl_plugin, decl_variable, export_plugin,
     variables,
@@ -7,18 +9,18 @@ struct PluginState {
     counter: i32,
 }
 
-const fn init() -> PluginState {
-    PluginState { counter: 0 }
+const fn init() -> Result<PluginState, String> {
+    Ok(PluginState { counter: 0 })
 }
 
 const fn update(_: &PluginState) {}
 
-fn get_variable(state: &PluginState, id: &str) -> String {
-    if id == "counter" {
+fn get_variable(state: &PluginState, id: &str) -> Result<String, String> {
+    Ok(if id == "counter" {
         state.counter.to_string()
     } else {
         unreachable!()
-    }
+    })
 }
 
 fn run_action(state: &mut PluginState, id: &str, args: &Args) {

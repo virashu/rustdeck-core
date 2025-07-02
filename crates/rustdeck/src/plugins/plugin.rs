@@ -155,7 +155,21 @@ impl Plugin {
                 }
             }
 
-            let state = (plugin.fn_init)();
+            let state_res = (plugin.fn_init)();
+
+            let state = if state_res.status == 0 {
+                state_res.content
+            } else {
+                return Err(PluginLoadError::InitError(
+                    try_ptr_to_str(state_res.content.cast()).map_or_else(
+                        |_| String::new(),
+                        |error| {
+                            // TODO: Free error pointer value
+                            error.to_owned()
+                        },
+                    ),
+                ));
+            };
 
             Ok(Self {
                 name,
@@ -214,20 +228,30 @@ impl Plugin {
         Ok(())
     }
 
-    pub fn get_variable<T>(&self, id: T) -> String
+    pub fn get_variable<T>(&self, id: T) -> Result<String, String>
     where
         T: AsRef<str>,
     {
         unsafe {
-            let res_ptr = (self.inner.fn_get_variable)(
+            let res = (self.inner.fn_get_variable)(
                 self.state,
                 CString::new(id.as_ref()).unwrap().as_ptr().cast::<c_char>(),
             );
-            let res = try_ptr_to_str(res_ptr).unwrap().to_owned();
 
-            self.free(res_ptr);
-
-            res
+            if res.status == 0 {
+                let value = try_ptr_to_str(res.content.cast()).unwrap().to_owned();
+                self.free(res.content.cast());
+                Ok(value)
+            } else {
+                try_ptr_to_str(res.content.cast()).map_or_else(
+                    |_| Err(String::new()),
+                    |error| {
+                        let error = error.to_owned();
+                        self.free(res.content.cast());
+                        Err(error)
+                    },
+                )
+            }
         }
     }
 
@@ -304,15 +328,16 @@ mod tests {
         counter: i32,
     }
 
-    fn init() -> PluginState {
-        PluginState { counter: 0 }
+    #[allow(clippy::unnecessary_wraps)]
+    fn init() -> Result<PluginState, Box<dyn std::error::Error>> {
+        Ok(PluginState { counter: 0 })
     }
 
     fn update(_: &PluginState) {}
 
-    fn get_variable(state: &PluginState, id: &str) -> String {
+    fn get_variable(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error::Error>> {
         if id == "counter" {
-            state.counter.to_string()
+            Ok(state.counter.to_string())
         } else {
             unreachable!()
         }
@@ -392,13 +417,13 @@ mod tests {
         assert!(plugin.is_ok());
         let plugin = plugin.unwrap();
 
-        assert_eq!(plugin.get_variable("counter"), "0");
+        assert_eq!(plugin.get_variable("counter").unwrap(), "0");
 
         assert!(plugin.run_action("increment".into(), &[]).is_ok());
-        assert_eq!(plugin.get_variable("counter"), "1");
+        assert_eq!(plugin.get_variable("counter").unwrap(), "1");
 
         assert!(plugin.run_action("add".into(), &["10".into()]).is_ok());
-        assert_eq!(plugin.get_variable("counter"), "11");
+        assert_eq!(plugin.get_variable("counter").unwrap(), "11");
 
         assert!(
             plugin

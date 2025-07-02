@@ -1,3 +1,5 @@
+#![allow(clippy::unnecessary_wraps)]
+
 use media_session::{MediaSession, traits::MediaSessionControls};
 use rustdeck_common::{
     Args, actions, decl_action, decl_plugin, decl_variable, export_plugin, variables,
@@ -7,10 +9,10 @@ struct PluginState {
     player: MediaSession,
 }
 
-fn init() -> PluginState {
-    PluginState {
+fn init() -> Result<PluginState, Box<dyn std::error::Error>> {
+    Ok(PluginState {
         player: MediaSession::new(),
-    }
+    })
 }
 
 fn update(_: &mut PluginState) {}
@@ -27,21 +29,21 @@ fn run_action(state: &PluginState, id: &str, _: &Args) {
     };
 }
 
-fn get_variable(_: &PluginState, id: &str) -> String {
+fn get_variable(_: &PluginState, id: &str) -> Result<String, String> {
     let Ok(session) = std::panic::catch_unwind(MediaSession::new) else {
         println!("Caught a panic in rustdeck-media while trying to create a session");
-        return String::new();
+        return Err(String::from("Failed to get session"));
     };
     let media_info = session.get_info();
 
     // let media_info = state.player.get_info();
 
-    match id {
+    Ok(match id {
         "title" => media_info.title,
         "artist" => media_info.artist,
         "state" => media_info.state,
         _ => unreachable!(),
-    }
+    })
 }
 
 export_plugin! {
