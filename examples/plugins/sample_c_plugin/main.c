@@ -28,12 +28,14 @@ get_variable(void* state, const char* id)
   return (Result){ .status = 1 };
 }
 
-void
+Result
 run_action(void* state, const char* id, const Arg* args)
 {
   if (!strcmp(id, "test_action")) {
     printf("Test action called | Arg value: %s\n", args[0].c);
   }
+
+  return (Result){};
 }
 
 // clang-format off

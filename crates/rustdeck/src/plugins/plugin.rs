@@ -302,22 +302,31 @@ impl Plugin {
         Ok(parsed)
     }
 
-    pub fn get_enum_arg<T>(&self, id: T) -> Vec<String>
+    pub fn get_enum_arg<T>(&self, id: T) -> Result<Vec<String>, String>
     where
         T: AsRef<str>,
     {
-        let res_ptr = unsafe {
-            (self.inner.fn_get_enum.as_ref().unwrap())(
+        unsafe {
+            let res = (self.inner.fn_get_enum.as_ref().unwrap())(
                 self.state,
                 CString::new(id.as_ref()).unwrap().as_ptr().cast::<c_char>(),
-            )
-        };
+            );
 
-        let res = unsafe { try_ptr_to_str(res_ptr).unwrap().to_owned() };
-
-        self.free(res_ptr);
-
-        res.split('\n').map(ToOwned::to_owned).collect()
+            if res.status == 0 {
+                let value = try_ptr_to_str(res.content.cast()).unwrap().to_owned();
+                self.free(res.content.cast());
+                Ok(value.split('\n').map(ToOwned::to_owned).collect())
+            } else {
+                try_ptr_to_str(res.content.cast()).map_or_else(
+                    |_| Err(String::from("<no error description>")),
+                    |error| {
+                        let error = error.to_owned();
+                        self.free(res.content.cast());
+                        Err(error)
+                    },
+                )
+            }
+        }
     }
 }
 

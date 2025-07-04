@@ -53,8 +53,7 @@ pub struct Plugin {
     pub fn_run_action:
         unsafe extern "C" fn(state: *mut c_void, id: *const c_char, args: *const Arg) -> Result,
 
-    pub fn_get_enum:
-        *const unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> *mut c_char,
+    pub fn_get_enum: *const unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> Result,
 }
 
 pub type BuildFn = unsafe extern "C" fn() -> *const Plugin;

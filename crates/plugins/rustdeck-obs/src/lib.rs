@@ -180,12 +180,10 @@ fn run_action(
     Ok(())
 }
 
-fn get_enum(state: &PluginState, id: &str) -> String {
-    match id {
+fn get_enum(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    Ok(match id {
         "set_filter.source" => {
-            let scenes = state
-                .rt
-                .block_on(async { state.client.scenes().list().await.unwrap() });
+            let scenes = state.rt.block_on(state.client.scenes().list())?;
 
             scenes
                 .scenes
@@ -213,46 +211,31 @@ fn get_enum(state: &PluginState, id: &str) -> String {
         "set_streaming.state" | "set_recording.state" | "set_virtual_cam.state" => {
             String::from("start\nstop\ntoggle")
         }
-        "set_scene.scene" | "set_source_visibility.scene" => state.rt.block_on(async {
-            state
-                .client
-                .scenes()
-                .list()
-                .await
-                .unwrap()
-                .scenes
-                .iter()
-                .rev() // NOTE: The order of OBS scenes is reversed (from bottom to top), so they need a reverse
-                .map(|s| s.id.name.clone())
-                .collect::<Vec<String>>()
-                .join("\n")
-        }),
-        "set_profile.profile" => state.rt.block_on(async {
-            state
-                .client
-                .profiles()
-                .list()
-                .await
-                .unwrap()
-                .profiles
-                .join("\n")
-        }),
-        "set_mute.source" => state.rt.block_on(async {
-            state
-                .client
-                .inputs()
-                .list(None)
-                .await
-                .unwrap()
-                .iter()
-                .map(|i| i.id.name.clone())
-                .collect::<Vec<String>>()
-                .join("\n")
-        }),
+        "set_scene.scene" | "set_source_visibility.scene" => state
+            .rt
+            .block_on(state.client.scenes().list())?
+            .scenes
+            .iter()
+            .rev() // NOTE: The order of OBS scenes is reversed (from bottom to top), so they need a reverse
+            .map(|s| s.id.name.clone())
+            .collect::<Vec<String>>()
+            .join("\n"),
+        "set_profile.profile" => state
+            .rt
+            .block_on(state.client.profiles().list())?
+            .profiles
+            .join("\n"),
+        "set_mute.source" => state
+            .rt
+            .block_on(state.client.inputs().list(None))?
+            .iter()
+            .map(|i| i.id.name.clone())
+            .collect::<Vec<String>>()
+            .join("\n"),
         "set_mute.state" => String::from("mute\nunmute\ntoggle"),
         "set_source_visibility.state" => String::from("show\nhide\ntoggle"),
         _ => unreachable!(),
-    }
+    })
 }
 
 export_plugin! {

@@ -11,7 +11,8 @@
 #define EXPORT
 #endif // _WIN32
 
-typedef struct {
+typedef struct
+{
   int status;
   void* content;
 } Result;
@@ -67,9 +68,10 @@ typedef struct
   Result (*fn_init)(void);
   void (*fn_update)(void* state);
   Result (*fn_get_variable)(void* state, const char* id);
-  void (*fn_run_action)(void* state, const char* id, const Arg* args);
+  Result (*fn_run_action)(void* state, const char* id, const Arg* args);
 
-  char* (**fn_get_enum)(void* state, const char* id);
+  /* Optional */
+  Result (**fn_get_enum)(void* state, const char* id);
 } Plugin;
 
 EXPORT

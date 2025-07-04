@@ -190,8 +190,8 @@ async fn list_icons(State(state): State<AxumState>) -> Json<Vec<String>> {
 async fn gt_enum_arg_variants(
     State(state): State<AxumState>,
     Path(id): Path<String>,
-) -> Json<Vec<String>> {
-    Json(state.deck.get_enum_arg_variants(id))
+) -> Result<Json<Vec<String>>, String> {
+    state.deck.get_enum_arg_variants(id).map(Json)
 }
 
 async fn build_and_run<S>(deck_ref: Arc<Deck>, host: S, port: u32)

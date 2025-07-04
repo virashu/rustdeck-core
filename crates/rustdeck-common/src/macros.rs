@@ -167,11 +167,22 @@ macro_rules! decl_plugin {
             unsafe extern "C" fn __get_enum(
                 state: *mut ::std::ffi::c_void,
                 id: *const ::std::ffi::c_char,
-            ) -> *mut ::std::ffi::c_char {
+            ) -> $crate::proto::Result {
                 let state = unsafe { &mut *state.cast() };
                 let id = $crate::util::ptr_to_str(id);
-                let res = ($user_fn_get_enum)(state, id);
-                ::std::ffi::CString::new(res).unwrap().into_raw()
+                match ($user_fn_get_enum)(state, id) {
+                    Ok(value) => $crate::proto::Result {
+                        status: 0,
+                        content: ::std::ffi::CString::new(value).unwrap().into_raw().cast(),
+                    },
+                    Err(e) => $crate::proto::Result {
+                        status: 1,
+                        content: ::std::ffi::CString::new(e.to_string())
+                            .unwrap()
+                            .into_raw()
+                            .cast(),
+                    },
+                }
             }
 
             let fn_get_enum_p = ::std::boxed::Box::into_raw(::std::boxed::Box::new(
@@ -179,7 +190,7 @@ macro_rules! decl_plugin {
                     as unsafe extern "C" fn(
                         *mut ::std::ffi::c_void,
                         *const ::std::ffi::c_char,
-                    ) -> *mut ::std::ffi::c_char,
+                    ) -> $crate::proto::Result,
             ))
             .cast_const();
 

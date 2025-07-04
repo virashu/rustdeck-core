@@ -378,10 +378,12 @@ impl Deck {
         }
     }
 
-    pub fn get_enum_arg_variants(&self, id: String) -> Vec<String> {
+    pub fn get_enum_arg_variants(&self, id: String) -> Result<Vec<String>, String> {
         if id.starts_with(DECK_ACTION_PREFIX) {
             match id.as_str() {
-                "deck.switch_screen.destination" => self.screens.read().keys().cloned().collect(),
+                "deck.switch_screen.destination" => {
+                    Ok(self.screens.read().keys().cloned().collect())
+                }
                 _ => unreachable!(),
             }
         } else {

@@ -11,3 +11,5 @@ dist/
 cpploader/
 a.exe
 a.out
+
+/crates/rustdeck-common/src/builder.rs
