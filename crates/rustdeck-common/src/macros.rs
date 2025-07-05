@@ -352,9 +352,7 @@ macro_rules! decl_variable {
             ::std::boxed::Box::into_raw(::std::boxed::Box::new($crate::proto::Variable {
                 id: $crate::util::str_to_ptr($id),
                 desc: $crate::util::str_to_ptr($desc),
-                r#type: $crate::Type::try_from($vtype)
-                    .expect("Incorrect variable type")
-                    .into(),
+                r#type: $crate::Type::from($vtype).into(),
             })) as *const $crate::proto::Variable
         }
     };
@@ -436,9 +434,7 @@ macro_rules! decl_arg {
                 id: $crate::util::str_to_ptr($id),
                 name: $crate::util::str_to_ptr($name),
                 desc: $crate::util::str_to_ptr($desc),
-                r#type: $crate::Type::try_from($vtype)
-                    .expect("Incorrect variable type")
-                    .into(),
+                r#type: $crate::Type::from($vtype).into(),
             })) as *const $crate::proto::ActionArg
         }
     };

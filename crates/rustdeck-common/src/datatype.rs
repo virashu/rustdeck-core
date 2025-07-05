@@ -32,17 +32,16 @@ impl TryFrom<i32> for Type {
     }
 }
 
-impl TryFrom<&str> for Type {
-    type Error = ();
-
-    fn try_from(value: &str) -> Result<Self, Self::Error> {
-        Ok(match value.to_lowercase().as_str() {
+#[allow(clippy::fallible_impl_from)]
+impl From<&str> for Type {
+    fn from(value: &str) -> Self {
+        match value.to_lowercase().as_str() {
             "bool" => Self::Bool,
             "int" => Self::Int,
             "float" => Self::Float,
             "string" => Self::String,
             "enum" => Self::Enum,
             _ => panic!("Invalid type value"),
-        })
+        }
     }
 }

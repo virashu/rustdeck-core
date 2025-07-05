@@ -2,32 +2,71 @@ use std::mem::ManuallyDrop;
 
 use crate::{Type, proto, util};
 
-// type InitFnR<StateT> = Fn() -> StateT;
-// type UpdateFnR<StateT> = Fn(&mut StateT);
-// type GetVariableFnR<StateT> = Fn(&mut StateT, &str) -> String;
-// type RunActionFnR<StateT> = Fn(&mut StateT, &str, &Args);
-
-struct VariableStruct {
-    id: String,
-    desc: String,
-    vtype: Type,
+pub struct Variable {
+    pub id: String,
+    pub desc: String,
+    pub vtype: Type,
 }
 
-struct ActionStruct {
+pub struct ActionArg {
+    pub id: String,
+    pub name: String,
+    pub desc: String,
+    pub vtype: Type,
+}
+
+pub struct Action {
+    pub id: String,
+    pub name: String,
+    pub desc: String,
+    pub args: Vec<ActionArg>,
+}
+
+impl Variable {
+    pub fn new(id: impl Into<String>, desc: impl Into<String>, vtype: impl Into<Type>) -> Self {
+        Self {
+            id: id.into(),
+            desc: desc.into(),
+            vtype: vtype.into(),
+        }
+    }
+}
+
+impl Action {
+    pub fn new(id: impl Into<String>, name: impl Into<String>, desc: impl Into<String>) -> Self {
+        Self {
+            id: id.into(),
+            name: name.into(),
+            desc: desc.into(),
+            args: Vec::new(),
+        }
+    }
+
+    #[must_use]
+    pub fn arg(
+        mut self,
+        id: impl Into<String>,
+        name: impl Into<String>,
+        desc: impl Into<String>,
+        vtype: impl Into<Type>,
+    ) -> Self {
+        self.args.push(ActionArg {
+            id: id.into(),
+            name: name.into(),
+            desc: desc.into(),
+            vtype: vtype.into(),
+        });
+        self
+    }
+}
+
+pub struct PluginBuilder {
     id: String,
     name: String,
     desc: String,
-}
 
-pub struct PluginBuilder<StateT = ()> {
-    id: String,
-    name: String,
-    desc: String,
-
-    state: Option<StateT>,
-
-    variables: Option<Vec<VariableStruct>>,
-    actions: Option<Vec<ActionStruct>>,
+    variables: Option<Vec<Variable>>,
+    actions: Option<Vec<Action>>,
 
     fn_init: Option<proto::FnInit>,
     fn_update: Option<proto::FnUpdate>,
@@ -37,13 +76,12 @@ pub struct PluginBuilder<StateT = ()> {
     fn_get_enum: Option<proto::FnGetEnum>,
 }
 
-impl<StateT> PluginBuilder<StateT> {
+impl PluginBuilder {
     pub fn new(id: impl AsRef<str>, name: impl AsRef<str>, desc: impl AsRef<str>) -> Self {
         Self {
             id: id.as_ref().to_owned(),
             name: name.as_ref().to_owned(),
             desc: desc.as_ref().to_owned(),
-            state: None,
             variables: None,
             actions: None,
             fn_init: None,
@@ -54,23 +92,14 @@ impl<StateT> PluginBuilder<StateT> {
         }
     }
 
+    #[must_use]
     pub fn init(mut self, f: proto::FnInit) -> Self {
         self.fn_init = Some(f);
         self
     }
 
-    pub fn variable(
-        mut self,
-        id: impl Into<String>,
-        desc: impl Into<String>,
-        vtype: impl Into<Type>,
-    ) -> Self {
-        let var = VariableStruct {
-            id: id.into(),
-            desc: desc.into(),
-            vtype: vtype.into(),
-        };
-
+    #[must_use]
+    pub fn variable(mut self, var: Variable) -> Self {
         if let Some(vars) = &mut self.variables {
             vars.push(var);
         } else {
@@ -80,18 +109,8 @@ impl<StateT> PluginBuilder<StateT> {
         self
     }
 
-    pub fn action(
-        mut self,
-        id: impl Into<String>,
-        name: impl Into<String>,
-        desc: impl Into<String>,
-    ) -> Self {
-        let act = ActionStruct {
-            id: id.into(),
-            name: name.into(),
-            desc: desc.into(),
-        };
-
+    #[must_use]
+    pub fn action(mut self, act: Action) -> Self {
         if let Some(acts) = &mut self.actions {
             acts.push(act);
         } else {
@@ -101,26 +120,29 @@ impl<StateT> PluginBuilder<StateT> {
         self
     }
 
+    #[must_use]
     pub fn update(mut self, f: proto::FnUpdate) -> Self {
         self.fn_update = Some(f);
         self
     }
 
+    #[must_use]
     pub fn get_variable(mut self, f: proto::FnGetVariable) -> Self {
         self.fn_get_variable = Some(f);
         self
     }
 
+    #[must_use]
     pub fn run_action(mut self, f: proto::FnRunAction) -> Self {
         self.fn_run_action = Some(f);
         self
     }
 
-    pub fn with_state(mut self, state: StateT) -> Self {
-        self.state = Some(state);
-        self
-    }
-
+    /// Builds the plugin.
+    ///
+    /// # Errors
+    ///
+    /// This function will return an error if any of the required functions are not set.
     pub fn build(self) -> Result<*const proto::Plugin, String> {
         let fn_init = self
             .fn_init
@@ -148,6 +170,7 @@ impl<StateT> PluginBuilder<StateT> {
                         }))
                         .cast_const()
                     })
+                    .chain(vec![std::ptr::null()])
                     .collect::<Vec<_>>(),
             )
             .as_ptr(),
@@ -167,6 +190,7 @@ impl<StateT> PluginBuilder<StateT> {
                         }))
                         .cast_const()
                     })
+                    .chain(vec![std::ptr::null()])
                     .collect::<Vec<_>>(),
             )
             .as_ptr(),
@@ -217,7 +241,7 @@ mod tests {
             Ok(())
         }
         assert!(
-            PluginBuilder::<()>::new("test_plugin", "Test Plugin", "Test Plugin")
+            PluginBuilder::new("test_plugin", "Test Plugin", "Test Plugin")
                 .init(decorate_fn_init!(init))
                 .update(decorate_fn_update!(update))
                 .get_variable(decorate_fn_get_variable!(get_variable))
