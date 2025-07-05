@@ -138,6 +138,12 @@ impl PluginBuilder {
         self
     }
 
+    #[must_use]
+    pub fn get_enum(mut self, f: proto::FnGetEnum) -> Self {
+        self.fn_get_enum = Some(f);
+        self
+    }
+
     /// Builds the plugin.
     ///
     /// # Errors
