@@ -1,4 +1,6 @@
-use std::{collections::HashMap, io, path::Path, sync::RwLock};
+use std::{collections::HashMap, io, path::Path, sync::Arc};
+
+use parking_lot::RwLock;
 
 use crate::{
     buttons::RawDeckButtonAction,
@@ -12,7 +14,8 @@ use crate::{
 use super::{Plugin, load_plugins_at};
 
 pub struct PluginStore {
-    plugins: HashMap<String, RwLock<Plugin>>,
+    plugins: RwLock<HashMap<String, RwLock<Plugin>>>,
+    plugins_uninit: Arc<RwLock<Vec<Plugin>>>,
 }
 
 impl PluginStore {
@@ -20,19 +23,57 @@ impl PluginStore {
     where
         S: AsRef<str>,
     {
-        let plugins = load_plugins_at(Path::new(path.as_ref()))?;
-        let plugins = plugins
-            .into_iter()
-            .map(|p| (p.id.clone(), RwLock::new(p)))
-            .collect();
+        tracing::info!("Loading plugins...");
 
-        Ok(Self { plugins })
+        let plugins = load_plugins_at(Path::new(path.as_ref()))?;
+        let plugins = RwLock::new(
+            plugins
+                .into_iter()
+                .map(|p| (p.id.clone(), RwLock::new(p)))
+                .collect(),
+        );
+
+        Ok(Self {
+            plugins,
+            plugins_uninit: Arc::new(RwLock::new(Vec::new())),
+        })
+    }
+
+    pub fn init_all(&self) {
+        tracing::info!("Initializing plugins...");
+
+        let mut uninit = Vec::new();
+
+        {
+            self.plugins.read().values().for_each(|p| {
+                let mut lock = p.write();
+                _ = lock
+                    .init()
+                    .inspect(|()| tracing::info!("Initialized plugin {:?}", lock.id))
+                    .inspect_err(|e| {
+                        tracing::warn!("Failed to initialize plugin {:?}: {}", lock.id, e);
+                        uninit.push(lock.id.clone());
+                    });
+            });
+
+            tracing::info!("Initialized plugins");
+        }
+
+        {
+            let mut plugins = self.plugins.write();
+            let mut uninit_vec = self.plugins_uninit.write();
+
+            for id in uninit {
+                uninit_vec.push(plugins.remove(&id).unwrap().into_inner());
+            }
+        }
     }
 
     pub fn update_all(&self) {
         self.plugins
+            .read()
             .values()
-            .for_each(|p| p.write().unwrap().update());
+            .for_each(|p| p.write().update());
     }
 
     pub fn try_resolve_variable<S>(&self, id: S) -> Result<String, String>
@@ -40,12 +81,11 @@ impl PluginStore {
         S: AsRef<str>,
     {
         let (plug_id, i) = id.as_ref().split_once('.').ok_or("Wrong variable format")?;
-        let plugin = self
-            .plugins
+        let plugins = self.plugins.read();
+        let plugin = plugins
             .get(plug_id)
             .ok_or_else(|| format!("Cannot find plugin: `{plug_id}`"))?
-            .read()
-            .unwrap();
+            .read();
 
         if !plugin.variables.iter().any(|v| v.id == i) {
             return Err(format!(
@@ -77,14 +117,12 @@ impl PluginStore {
         }
 
         {
-            let plugin = self
-                .plugins
+            self.plugins
+                .read()
                 .get(plug_id)
                 .ok_or_else(|| ActionError::PluginNotFound(plug_id.into()))?
                 .read()
-                .unwrap();
-
-            plugin.run_action(act_id.to_string(), &act.args)?;
+                .run_action(act_id.to_string(), &act.args)?;
         }
 
         Ok(())
@@ -106,8 +144,9 @@ impl PluginStore {
     /// Get all variables of all plugins in the same vector
     pub fn get_all_variables_ungrouped(&self) -> Vec<PluginVariablesUngroupedData> {
         self.plugins
+            .read()
             .values()
-            .flat_map(|p| Self::get_variables_of(&p.read().unwrap()))
+            .flat_map(|p| Self::get_variables_of(&p.read()))
             .collect()
     }
 
@@ -116,9 +155,10 @@ impl PluginStore {
     /// Does not include plugins without variables
     pub fn get_all_variables_grouped(&self) -> Vec<PluginVariablesGroupedData> {
         self.plugins
+            .read()
             .values()
             .filter_map(|p| {
-                let lock = p.read().unwrap();
+                let lock = p.read();
                 let variables = Self::get_variables_of(&lock);
                 if variables.is_empty() {
                     None
@@ -160,8 +200,9 @@ impl PluginStore {
     /// Get all actions of all plugins in the same vector
     pub fn get_all_actions_ungrouped(&self) -> Vec<PluginActionsUngroupedData> {
         self.plugins
+            .read()
             .values()
-            .flat_map(|p| Self::get_actions_of(&p.read().unwrap()))
+            .flat_map(|p| Self::get_actions_of(&p.read()))
             .collect()
     }
 
@@ -170,9 +211,10 @@ impl PluginStore {
     /// Does not include plugins without actions
     pub fn get_all_actions_grouped(&self) -> Vec<PluginActionsGroupedData> {
         self.plugins
+            .read()
             .values()
             .filter_map(|p| {
-                let lock = p.read().unwrap();
+                let lock = p.read();
                 let actions = Self::get_actions_of(&lock);
                 if actions.is_empty() {
                     None
@@ -189,9 +231,10 @@ impl PluginStore {
 
     pub fn get_all_plugins(&self) -> Vec<PluginData> {
         self.plugins
+            .read()
             .values()
             .map(|p| {
-                let lock = p.read().unwrap();
+                let lock = p.read();
                 PluginData {
                     id: lock.id.clone(),
                     name: lock.name.clone(),
@@ -210,13 +253,22 @@ impl PluginStore {
             .split_once('.')
             .expect(format!("Invalid arg id format: {id}").as_str());
 
-        let plugin = self
-            .plugins
+        self.plugins
+            .read()
             .get(plug_id)
             .expect("Failed to find plugin")
             .read()
-            .unwrap();
+            .get_enum_arg(act_id)
+    }
 
-        plugin.get_enum_arg(act_id)
+    pub fn get_plugins_config(&self) -> HashMap<String, HashMap<String, String>> {
+        self.plugins
+            .read()
+            .values()
+            .map(|p| {
+                let lock = p.read();
+                todo!()
+            })
+            .collect()
     }
 }

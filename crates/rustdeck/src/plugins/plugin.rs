@@ -10,35 +10,15 @@ use rustdeck_common::{
     util::{self, try_ptr_to_str},
 };
 
-use super::{datatype::PluginDataType, error::PluginLoadError};
+use super::{
+    datatype::PluginDataType,
+    error::PluginLoadError,
+    proto::{Action, ActionArg, ConfigOption, Variable},
+};
 use crate::{
     constants::DECK_ACTION_ID,
     plugins::{error::ActionError, safe_arg::SafeArg},
 };
-
-/// Args are positional
-#[derive(Clone)]
-pub struct ActionArg {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub r#type: PluginDataType,
-}
-
-#[derive(Clone)]
-pub struct Action {
-    pub id: String,
-    pub name: String,
-    pub description: String,
-    pub args: Vec<ActionArg>,
-}
-
-#[derive(Clone)]
-pub struct Variable {
-    pub id: String,
-    pub description: String,
-    pub r#type: PluginDataType,
-}
 
 /// Wrapper to isolate all the unsafe operations
 ///
@@ -50,11 +30,13 @@ pub struct Plugin {
     pub name: String,
     pub description: String,
     pub id: String,
+
     pub actions: Vec<Action>,
     pub variables: Vec<Variable>,
+    pub config_options: Vec<ConfigOption>,
 
     inner: &'static FFIPlugin,
-    state: *mut c_void,
+    state: Option<*mut c_void>,
     has_free: bool,
 
     #[allow(dead_code, reason = "plugin depends on library")]
@@ -97,78 +79,38 @@ impl Plugin {
             let name = util::try_ptr_to_str(plugin.name)?.to_owned();
             let description = util::try_ptr_to_str(plugin.desc)?.to_owned();
 
-            let mut variables = Vec::new();
-            if !plugin.variables.is_null() {
-                let mut vars_offset = 0;
-                while let Some(var) = plugin
-                    .variables
-                    .offset(vars_offset)
-                    .as_ref()
-                    .unwrap()
-                    .as_ref()
-                {
-                    variables.push(Variable {
-                        id: util::try_ptr_to_str(var.id)?.to_owned(),
-                        description: util::try_ptr_to_str(var.desc)?.to_owned(),
-                        r#type: var.r#type.try_into()?,
-                    });
-                    vars_offset += 1;
-                }
-            }
-
-            let mut actions = Vec::new();
-            if !plugin.actions.is_null() {
-                let mut actions_offset = 0;
-                while let Some(act) = plugin
-                    .actions
-                    .offset(actions_offset)
-                    .as_ref()
-                    .unwrap()
-                    .as_ref()
-                {
-                    let mut args = Vec::new();
-
-                    if !act.args.is_null() {
-                        let mut args_offset = 0;
-                        while let Some(arg) =
-                            act.args.offset(args_offset).as_ref().unwrap().as_ref()
-                        {
-                            args.push(ActionArg {
-                                id: util::try_ptr_to_str(arg.id)?.to_owned(),
-                                name: util::try_ptr_to_str(arg.name)?.to_owned(),
-                                description: util::try_ptr_to_str(arg.desc)?.to_owned(),
-                                r#type: arg.r#type.try_into()?,
-                            });
-
-                            args_offset += 1;
-                        }
-                    }
-
-                    actions.push(Action {
-                        id: util::try_ptr_to_str(act.id)?.to_owned(),
-                        name: util::try_ptr_to_str(act.name)?.to_owned(),
-                        description: util::try_ptr_to_str(act.desc)?.to_owned(),
-                        args,
-                    });
-
-                    actions_offset += 1;
-                }
-            }
-
-            let state_res = (plugin.fn_init)();
-
-            let state = if state_res.status == 0 {
-                state_res.content
+            let variables = if plugin.variables.is_null() {
+                Vec::new()
             } else {
-                return Err(PluginLoadError::InitError(
-                    try_ptr_to_str(state_res.content.cast()).map_or_else(
-                        |_| String::new(),
-                        |error| {
-                            // TODO: Free error pointer value
-                            error.to_owned()
-                        },
-                    ),
-                ));
+                (0..isize::MAX)
+                    .map_while(|offset| plugin.variables.offset(offset).as_ref().unwrap().as_ref())
+                    .map(Variable::from_ffi_ref)
+                    .collect::<Result<Vec<Variable>, PluginLoadError>>()?
+            };
+
+            let actions = if plugin.actions.is_null() {
+                Vec::new()
+            } else {
+                (0..isize::MAX)
+                    .map_while(|offset| plugin.actions.offset(offset).as_ref().unwrap().as_ref())
+                    .map(Action::from_ffi_ref)
+                    .collect::<Result<Vec<Action>, PluginLoadError>>()?
+            };
+
+            let config_options = if plugin.config_options.is_null() {
+                Vec::new()
+            } else {
+                (0..isize::MAX)
+                    .map_while(|offset| {
+                        plugin
+                            .config_options
+                            .offset(offset)
+                            .as_ref()
+                            .unwrap()
+                            .as_ref()
+                    })
+                    .map(ConfigOption::from_ffi_ref)
+                    .collect::<Result<Vec<ConfigOption>, PluginLoadError>>()?
             };
 
             Ok(Self {
@@ -177,16 +119,41 @@ impl Plugin {
                 id,
                 actions,
                 variables,
+                config_options,
                 inner: plugin,
                 has_free: false,
-                state,
+                state: None,
                 lib: None,
             })
         }
     }
 
+    pub fn init(&mut self) -> Result<(), String> {
+        unsafe {
+            let state_res = (self.inner.fn_init)();
+
+            let state = if state_res.status == 0 {
+                state_res.content
+            } else {
+                return Err(try_ptr_to_str(state_res.content.cast()).map_or_else(
+                    |_| String::new(),
+                    |error| {
+                        let error = error.to_owned();
+                        self.free(state_res.content.cast());
+                        error
+                    },
+                ));
+            };
+
+            self.state = Some(state);
+        }
+
+        Ok(())
+    }
+
     pub fn update(&mut self) {
-        unsafe { (self.inner.fn_update)(self.state) }
+        let state = self.state.expect("Plugin is not initialized");
+        unsafe { (self.inner.fn_update)(state) }
     }
 
     fn free(&self, ptr: *mut c_char) {
@@ -203,6 +170,8 @@ impl Plugin {
 
     /// Validate args and run action
     pub fn run_action(&self, act_id: String, args: &[String]) -> Result<(), ActionError> {
+        let state = self.state.expect("Plugin is not initialized");
+
         let Some(action_prototype) = self.actions.iter().find(|v| v.id == act_id) else {
             return Err(ActionError::ActionNotFound {
                 plugin: self.id.clone(),
@@ -215,7 +184,7 @@ impl Plugin {
 
         unsafe {
             let res = (self.inner.fn_run_action)(
-                self.state,
+                state,
                 CString::new(act_id).unwrap().as_ptr().cast::<c_char>(),
                 safe_args
                     .iter()
@@ -241,9 +210,11 @@ impl Plugin {
     where
         T: AsRef<str>,
     {
+        let state = self.state.expect("Plugin is not initialized");
+
         unsafe {
             let res = (self.inner.fn_get_variable)(
-                self.state,
+                state,
                 CString::new(id.as_ref()).unwrap().as_ptr().cast::<c_char>(),
             );
 
@@ -306,9 +277,11 @@ impl Plugin {
     where
         T: AsRef<str>,
     {
+        let state = self.state.expect("Plugin is not initialized");
+
         unsafe {
             let res = (self.inner.fn_get_enum.as_ref().unwrap())(
-                self.state,
+                state,
                 CString::new(id.as_ref()).unwrap().as_ptr().cast::<c_char>(),
             );
 

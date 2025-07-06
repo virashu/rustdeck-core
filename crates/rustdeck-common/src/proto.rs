@@ -38,6 +38,14 @@ pub struct Variable {
     pub r#type: i32,
 }
 
+#[repr(C)]
+pub struct ConfigOption {
+    pub id: *const c_char,
+    pub name: *const c_char,
+    pub desc: *const c_char,
+    pub r#type: i32,
+}
+
 /* Methods */
 pub type FnInit = unsafe extern "C" fn() -> Result;
 pub type FnUpdate = unsafe extern "C" fn(state: *mut c_void);
@@ -45,6 +53,8 @@ pub type FnGetVariable = unsafe extern "C" fn(state: *mut c_void, id: *const c_c
 pub type FnRunAction =
     unsafe extern "C" fn(state: *mut c_void, id: *const c_char, args: *const Arg) -> Result;
 pub type FnGetEnum = *const unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> Result;
+pub type FnGetConfigValue =
+    *const unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> Result;
 
 #[repr(C)]
 pub struct Plugin {
@@ -54,6 +64,7 @@ pub struct Plugin {
 
     pub variables: *const *const Variable,
     pub actions: *const *const Action,
+    pub config_options: *const *const ConfigOption,
 
     pub fn_init: FnInit,
     pub fn_update: FnUpdate,
@@ -62,6 +73,7 @@ pub struct Plugin {
 
     /* Optional */
     pub fn_get_enum: FnGetEnum,
+    pub fn_get_config_value: FnGetConfigValue,
 }
 
 /* Globals */

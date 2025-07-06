@@ -3,7 +3,7 @@
 
 use rustdeck_common::{
     Args, Type,
-    builder::{Action, PluginBuilder, Variable},
+    builder::{Action, ConfigOption, PluginBuilder, Variable},
     decorate_fn_get_enum, decorate_fn_get_variable, decorate_fn_init, decorate_fn_run_action,
     decorate_fn_update, export_plugin,
 };
@@ -247,6 +247,8 @@ export_plugin! {
         .get_variable(decorate_fn_get_variable!(get_variable))
         .run_action(decorate_fn_run_action!(run_action))
         .get_enum(decorate_fn_get_enum!(get_enum))
+        .config_option(ConfigOption::new("host", "Host", "The host of the OBS websocket", Type::String))
+        .config_option(ConfigOption::new("port", "Port", "The port of the OBS websocket", Type::Int))
         .variable(Variable::new("scene", "Scene", Type::String))
         .variable(Variable::new("profile", "Profile", Type::String))
         .variable(Variable::new("is_streaming", "Is Streaming", Type::Bool))

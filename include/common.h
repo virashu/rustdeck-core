@@ -62,8 +62,18 @@ typedef struct
   const char* id;
   const char* name;
   const char* desc;
+  const enum Type type;
+} ConfigOption;
+
+typedef struct
+{
+  const char* id;
+  const char* name;
+  const char* desc;
+
   const Variable* const* variables;
   const Action* const* actions;
+  const ConfigOption* const* config_options;
 
   Result (*fn_init)(void);
   void (*fn_update)(void* state);
@@ -72,6 +82,7 @@ typedef struct
 
   /* Optional */
   Result (**fn_get_enum)(void* state, const char* id);
+  Result (**fn_get_config_value)(void* state, const char* id);
 } Plugin;
 
 EXPORT

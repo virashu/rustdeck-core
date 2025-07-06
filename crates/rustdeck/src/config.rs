@@ -89,6 +89,11 @@ struct SerializedDeckConfig {
     deck: DeckDimensionConfig,
     screens: Vec<SerializedDeckButtonScreen>,
     icons: HashMap<String, String>,
+    #[serde(
+        skip_serializing_if = "HashMap::is_empty",
+        default = "HashMap::default"
+    )]
+    plugins: HashMap<String, HashMap<String, String>>,
 }
 
 impl From<&DeckConfig> for SerializedDeckConfig {
@@ -104,6 +109,7 @@ impl From<&DeckConfig> for SerializedDeckConfig {
                 })
                 .collect(),
             icons: value.icons.clone(),
+            plugins: value.plugins.clone(),
         }
     }
 }
@@ -118,6 +124,7 @@ impl From<SerializedDeckConfig> for DeckConfig {
                 .map(SerializedDeckButtonScreen::into_deck_button_screen)
                 .collect(),
             icons: value.icons,
+            plugins: value.plugins,
         }
     }
 }
@@ -126,6 +133,7 @@ pub struct DeckConfig {
     pub deck: DeckDimensionConfig,
     pub screens: DeckScreens,
     pub icons: HashMap<String, String>,
+    pub plugins: HashMap<String, HashMap<String, String>>,
 }
 
 impl Default for DeckConfig {
@@ -135,6 +143,7 @@ impl Default for DeckConfig {
             deck: DeckDimensionConfig::default(),
             screens: IndexMap::from([("default".into(), HashMap::default())]),
             icons: HashMap::default(),
+            plugins: HashMap::default(),
         }
     }
 }

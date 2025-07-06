@@ -2,6 +2,7 @@ mod datatype;
 mod error;
 mod loading;
 mod plugin;
+mod proto;
 mod safe_arg;
 mod store;
 // mod util;

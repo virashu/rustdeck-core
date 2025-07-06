@@ -175,8 +175,10 @@ macro_rules! decl_plugin {
                 id: $crate::util::str_to_ptr($id),
                 name: $crate::util::str_to_ptr($name),
                 desc: $crate::util::str_to_ptr($desc),
+
                 variables: $variables,
                 actions: $actions,
+                config_options: ::std::ptr::null(),
 
                 fn_init: fn_init,
                 fn_update: fn_update,
@@ -184,6 +186,7 @@ macro_rules! decl_plugin {
                 fn_run_action: fn_run_action,
 
                 fn_get_enum: $user_fn_get_enum,
+                fn_get_config_value: ::std::ptr::null(),
             })) as *const $crate::proto::Plugin
         }
     };

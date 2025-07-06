@@ -76,6 +76,8 @@ impl Deck {
     }
 
     pub fn run(&self) {
+        self.plugin_store.init_all();
+
         let mut inst = Instant::now();
 
         loop {
@@ -398,6 +400,7 @@ impl Deck {
             deck: self.config.read().clone(),
             screens: self.screens.read().clone(),
             icons: self.icon_store.to_config(),
+            plugins: self.plugin_store.get_plugins_config(),
         }
     }
 
