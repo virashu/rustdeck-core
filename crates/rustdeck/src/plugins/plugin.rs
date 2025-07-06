@@ -150,9 +150,25 @@ impl Plugin {
         Ok(())
     }
 
-    pub fn update(&mut self) {
+    pub fn update(&mut self) -> Result<(), String> {
         let state = self.state.expect("Plugin is not initialized");
-        unsafe { (self.inner.fn_update)(state) }
+
+        unsafe {
+            let res = (self.inner.fn_update)(state);
+
+            if res.status == 0 {
+                Ok(())
+            } else {
+                try_ptr_to_str(res.content.cast()).map_or_else(
+                    |_| Err(String::from("<no error description>")),
+                    |error| {
+                        let error = error.to_owned();
+                        self.free(res.content.cast());
+                        Err(error)
+                    },
+                )
+            }
+        }
     }
 
     fn free(&self, ptr: *mut c_char) {
@@ -335,8 +351,7 @@ impl Plugin {
                 std::ptr::from_ref(&arg.as_arg()),
             );
         }
-
-        todo!()
+        Ok(())
     }
 }
 

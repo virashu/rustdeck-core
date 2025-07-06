@@ -1,11 +1,6 @@
 use std::ffi::{c_char, c_void};
 
-#[repr(C)]
-pub struct Result {
-    /// 0 = Ok, 1 = Error
-    pub status: i32,
-    pub content: *mut c_void,
-}
+use crate::Result;
 
 #[repr(C)]
 pub union Arg {
@@ -47,16 +42,23 @@ pub struct ConfigOption {
 }
 
 /* Methods */
-pub type FnInit = unsafe extern "C" fn() -> Result;
-pub type FnUpdate = unsafe extern "C" fn(state: *mut c_void);
-pub type FnGetVariable = unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> Result;
+pub type FnInit = unsafe extern "C-unwind" fn() -> Result;
+
+pub type FnUpdate = unsafe extern "C-unwind" fn(state: *mut c_void) -> Result;
+
+pub type FnGetVariable =
+    unsafe extern "C-unwind" fn(state: *mut c_void, id: *const c_char) -> Result;
+
 pub type FnRunAction =
-    unsafe extern "C" fn(state: *mut c_void, id: *const c_char, args: *const Arg) -> Result;
-pub type FnGetEnum = *const unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> Result;
+    unsafe extern "C-unwind" fn(state: *mut c_void, id: *const c_char, args: *const Arg) -> Result;
+
+pub type FnGetEnum = unsafe extern "C-unwind" fn(state: *mut c_void, id: *const c_char) -> Result;
+
 pub type FnGetConfigValue =
-    *const unsafe extern "C" fn(state: *mut c_void, id: *const c_char) -> Result;
+    unsafe extern "C-unwind" fn(state: *mut c_void, id: *const c_char) -> Result;
+
 pub type FnSetConfigValue =
-    *const unsafe extern "C" fn(state: *mut c_void, id: *const c_char, value: *const Arg) -> Result;
+    unsafe extern "C-unwind" fn(state: *mut c_void, id: *const c_char, value: *const Arg) -> Result;
 
 #[repr(C)]
 pub struct Plugin {
@@ -74,11 +76,12 @@ pub struct Plugin {
     pub fn_run_action: FnRunAction,
 
     /* Optional */
-    pub fn_get_enum: FnGetEnum,
-    pub fn_get_config_value: FnGetConfigValue,
-    pub fn_set_config_value: FnSetConfigValue,
+    pub fn_get_enum: *const FnGetEnum,
+    pub fn_get_config_value: *const FnGetConfigValue,
+    pub fn_set_config_value: *const FnSetConfigValue,
 }
 
 /* Globals */
-pub type BuildFn = unsafe extern "C" fn() -> *const Plugin;
-pub type FreeStringFn = unsafe extern "C" fn(*mut c_char);
+pub type BuildFn = unsafe extern "C-unwind" fn() -> *const Plugin;
+
+pub type FreeStringFn = unsafe extern "C-unwind" fn(*mut c_char);

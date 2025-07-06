@@ -76,7 +76,7 @@ typedef struct
   const ConfigOption* const* config_options;
 
   Result (*fn_init)(void);
-  void (*fn_update)(void* state);
+  Result (*fn_update)(void* state);
   Result (*fn_get_variable)(void* state, const char* id);
   Result (*fn_run_action)(void* state, const char* id, const Arg* args);
 

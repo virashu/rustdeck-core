@@ -91,6 +91,7 @@ impl ConfigOption {
     }
 }
 
+#[must_use]
 pub struct PluginBuilder {
     id: String,
     name: String,
@@ -105,9 +106,9 @@ pub struct PluginBuilder {
     fn_get_variable: Option<proto::FnGetVariable>,
     fn_run_action: Option<proto::FnRunAction>,
 
-    fn_get_enum: Option<proto::FnGetEnum>,
-    fn_get_config_value: Option<proto::FnGetConfigValue>,
-    fn_set_config_value: Option<proto::FnSetConfigValue>,
+    fn_get_enum: Option<*const proto::FnGetEnum>,
+    fn_get_config_value: Option<*const proto::FnGetConfigValue>,
+    fn_set_config_value: Option<*const proto::FnSetConfigValue>,
 }
 
 impl PluginBuilder {
@@ -132,13 +133,11 @@ impl PluginBuilder {
         }
     }
 
-    #[must_use]
     pub fn init(mut self, f: proto::FnInit) -> Self {
         self.fn_init = Some(f);
         self
     }
 
-    #[must_use]
     pub fn variable(mut self, var: Variable) -> Self {
         if let Some(vars) = &mut self.variables {
             vars.push(var);
@@ -149,7 +148,6 @@ impl PluginBuilder {
         self
     }
 
-    #[must_use]
     pub fn action(mut self, act: Action) -> Self {
         if let Some(acts) = &mut self.actions {
             acts.push(act);
@@ -160,7 +158,6 @@ impl PluginBuilder {
         self
     }
 
-    #[must_use]
     pub fn config_option(mut self, opt: ConfigOption) -> Self {
         if let Some(opts) = &mut self.config_options {
             opts.push(opt);
@@ -171,33 +168,33 @@ impl PluginBuilder {
         self
     }
 
-    #[must_use]
     pub fn update(mut self, f: proto::FnUpdate) -> Self {
         self.fn_update = Some(f);
         self
     }
 
-    #[must_use]
     pub fn get_variable(mut self, f: proto::FnGetVariable) -> Self {
         self.fn_get_variable = Some(f);
         self
     }
 
-    #[must_use]
     pub fn run_action(mut self, f: proto::FnRunAction) -> Self {
         self.fn_run_action = Some(f);
         self
     }
 
-    #[must_use]
-    pub fn get_enum(mut self, f: proto::FnGetEnum) -> Self {
+    pub fn get_enum(mut self, f: *const proto::FnGetEnum) -> Self {
         self.fn_get_enum = Some(f);
         self
     }
 
-    #[must_use]
-    pub fn get_config_value(mut self, f: proto::FnGetConfigValue) -> Self {
+    pub fn get_config_value(mut self, f: *const proto::FnGetConfigValue) -> Self {
         self.fn_get_config_value = Some(f);
+        self
+    }
+
+    pub fn set_config_value(mut self, f: *const proto::FnSetConfigValue) -> Self {
+        self.fn_set_config_value = Some(f);
         self
     }
 

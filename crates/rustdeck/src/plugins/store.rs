@@ -70,10 +70,16 @@ impl PluginStore {
     }
 
     pub fn update_all(&self) {
-        self.plugins
-            .read()
-            .values()
-            .for_each(|p| p.write().update());
+        self.plugins.read().values().for_each(|p| {
+            let mut lock = p.write();
+            _ = lock.update().inspect_err(|e| {
+                tracing::warn!(
+                    "A error occurred while updating plugin {:?}: {}",
+                    lock.id,
+                    e
+                );
+            });
+        });
     }
 
     pub fn try_resolve_variable<S>(&self, id: S) -> Result<String, String>

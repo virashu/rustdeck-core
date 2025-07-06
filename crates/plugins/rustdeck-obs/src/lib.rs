@@ -4,43 +4,72 @@
 use rustdeck_common::{
     Args, Type,
     builder::{Action, ConfigOption, PluginBuilder, Variable},
-    decorate_fn_get_enum, decorate_fn_get_variable, decorate_fn_init, decorate_fn_run_action,
-    decorate_fn_update, export_plugin,
+    decorate_fn_get_config_value, decorate_fn_get_enum, decorate_fn_get_variable, decorate_fn_init,
+    decorate_fn_run_action, decorate_fn_set_config_value, decorate_fn_update, export_plugin,
 };
+
+struct Config {
+    host: String,
+    port: u16,
+    password: Option<String>,
+}
 
 struct PluginState {
     rt: tokio::runtime::Runtime,
-    client: obws::Client,
+    config: Config,
+    client: Option<obws::Client>,
 }
 
 fn init() -> Result<PluginState, Box<dyn std::error::Error>> {
     let rt = tokio::runtime::Builder::new_current_thread()
         .enable_all()
         .build()?;
-    let client = rt.block_on(obws::Client::connect("localhost", 4455, Some("aaaaaa")))?;
 
-    Ok(PluginState { rt, client })
+    Ok(PluginState {
+        rt,
+        config: Config {
+            host: "localhost".into(),
+            port: 4455,
+            password: None,
+        },
+        client: None,
+    })
 }
 
-fn update(_: &PluginState) {}
+fn update(state: &mut PluginState) -> Result<(), Box<dyn std::error::Error>> {
+    if state.client.is_none() {
+        state.client = Some(state.rt.block_on(obws::Client::connect(
+            &state.config.host,
+            state.config.port,
+            state.config.password.clone(),
+        ))?);
+    }
+
+    Ok(())
+}
 
 fn get_variable(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let client = state
+        .client
+        .as_ref()
+        .ok_or_else(|| String::from("Not initialized"))?;
+
     Ok(match id {
         "scene" => {
             state
                 .rt
-                .block_on(state.client.scenes().current_program_scene())?
+                .block_on(client.scenes().current_program_scene())?
                 .id
                 .name
         }
-        "profile" => state.rt.block_on(state.client.profiles().current())?,
+        "profile" => state.rt.block_on(client.profiles().current())?,
         "is_streaming" => state
             .rt
-            .block_on(state.client.streaming().status())?
+            .block_on(client.streaming().status())?
             .active
             .to_string(),
         "streaming_state" => {
-            if state.rt.block_on(state.client.streaming().status())?.active {
+            if state.rt.block_on(client.streaming().status())?.active {
                 "online".into()
             } else {
                 "offline".into()
@@ -56,13 +85,18 @@ fn run_action(
     id: &str,
     args: &Args,
 ) -> Result<(), Box<dyn std::error::Error>> {
+    let client = state
+        .client
+        .as_ref()
+        .ok_or_else(|| String::from("Not initialized"))?;
+
     match id {
         "set_filter" => {
             let source_string = args.get(0).string().to_owned();
             let source = source_string.as_str().into();
             let filter = args.get(1).string().to_owned();
 
-            let filters = state.client.filters();
+            let filters = client.filters();
             let enabled = match args.get(2).string() {
                 "on" => true,
                 "off" => false,
@@ -83,27 +117,25 @@ fn run_action(
             let source = args.get(1).string().to_owned();
             let source_state = args.get(2).string().to_owned();
 
-            let item_id = state.rt.block_on(state.client.scene_items().id(
-                obws::requests::scene_items::Id {
-                    scene: scene.as_str().into(),
-                    source: source.as_str(),
-                    ..Default::default()
-                },
-            ))?;
+            let item_id =
+                state
+                    .rt
+                    .block_on(client.scene_items().id(obws::requests::scene_items::Id {
+                        scene: scene.as_str().into(),
+                        source: source.as_str(),
+                        ..Default::default()
+                    }))?;
 
             let enabled = match source_state.as_str() {
                 "show" => true,
                 "hide" => false,
-                "toggle" => !state.rt.block_on(
-                    state
-                        .client
-                        .scene_items()
-                        .enabled(scene.as_str().into(), item_id),
-                )?,
+                "toggle" => !state
+                    .rt
+                    .block_on(client.scene_items().enabled(scene.as_str().into(), item_id))?,
                 _ => unreachable!(),
             };
 
-            state.rt.block_on(state.client.scene_items().set_enabled(
+            state.rt.block_on(client.scene_items().set_enabled(
                 obws::requests::scene_items::SetEnabled {
                     scene: scene.as_str().into(),
                     item_id,
@@ -113,45 +145,44 @@ fn run_action(
         }
         "set_scene" => {
             state.rt.block_on(
-                state
-                    .client
+                client
                     .scenes()
                     .set_current_program_scene(args.get(0).string()),
             )?;
         }
         "set_streaming" => match args.get(0).string() {
             "toggle" => {
-                state.rt.block_on(state.client.streaming().toggle())?;
+                state.rt.block_on(client.streaming().toggle())?;
             }
             "start" => {
-                state.rt.block_on(state.client.streaming().start())?;
+                state.rt.block_on(client.streaming().start())?;
             }
             "stop" => {
-                state.rt.block_on(state.client.streaming().stop())?;
+                state.rt.block_on(client.streaming().stop())?;
             }
             _ => unreachable!(),
         },
         "set_recording" => match args.get(0).string() {
             "toggle" => {
-                state.rt.block_on(state.client.recording().toggle())?;
+                state.rt.block_on(client.recording().toggle())?;
             }
             "start" => {
-                state.rt.block_on(state.client.recording().start())?;
+                state.rt.block_on(client.recording().start())?;
             }
             "stop" => {
-                state.rt.block_on(state.client.recording().stop())?;
+                state.rt.block_on(client.recording().stop())?;
             }
             _ => unreachable!(),
         },
         "set_virtual_cam" => match args.get(0).string() {
             "toggle" => {
-                state.rt.block_on(state.client.virtual_cam().toggle())?;
+                state.rt.block_on(client.virtual_cam().toggle())?;
             }
             "start" => {
-                state.rt.block_on(state.client.virtual_cam().start())?;
+                state.rt.block_on(client.virtual_cam().start())?;
             }
             "stop" => {
-                state.rt.block_on(state.client.virtual_cam().stop())?;
+                state.rt.block_on(client.virtual_cam().stop())?;
             }
             _ => unreachable!(),
         },
@@ -163,12 +194,11 @@ fn run_action(
                 "toggle" => {
                     state
                         .rt
-                        .block_on(state.client.inputs().toggle_mute(input.as_str().into()))?;
+                        .block_on(client.inputs().toggle_mute(input.as_str().into()))?;
                 }
                 "mute" | "unmute" => {
                     state.rt.block_on(
-                        state
-                            .client
+                        client
                             .inputs()
                             .set_muted(input.as_str().into(), input_state == "mute"),
                     )?;
@@ -183,9 +213,14 @@ fn run_action(
 }
 
 fn get_enum(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error::Error>> {
+    let client = state
+        .client
+        .as_ref()
+        .ok_or_else(|| String::from("Not initialized"))?;
+
     Ok(match id {
         "set_filter.source" => {
-            let scenes = state.rt.block_on(state.client.scenes().list())?;
+            let scenes = state.rt.block_on(client.scenes().list())?;
 
             scenes
                 .scenes
@@ -193,12 +228,7 @@ fn get_enum(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error:
                 .flat_map(|scene| {
                     state
                         .rt
-                        .block_on(
-                            state
-                                .client
-                                .scene_items()
-                                .list(scene.id.name.as_str().into()),
-                        )
+                        .block_on(client.scene_items().list(scene.id.name.as_str().into()))
                         .unwrap()
                 })
                 .map(|item| item.source_name)
@@ -206,7 +236,7 @@ fn get_enum(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error:
                 .join("\n")
         }
         "set_filter.filter" => state.rt.block_on(async {
-            state.client.filters();
+            client.filters();
             String::new()
         }),
         "set_filter.state" => String::from("on\noff\ntoggle"),
@@ -215,7 +245,7 @@ fn get_enum(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error:
         }
         "set_scene.scene" | "set_source_visibility.scene" => state
             .rt
-            .block_on(state.client.scenes().list())?
+            .block_on(client.scenes().list())?
             .scenes
             .iter()
             .rev() // NOTE: The order of OBS scenes is reversed (from bottom to top), so they need a reverse
@@ -224,12 +254,12 @@ fn get_enum(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error:
             .join("\n"),
         "set_profile.profile" => state
             .rt
-            .block_on(state.client.profiles().list())?
+            .block_on(client.profiles().list())?
             .profiles
             .join("\n"),
         "set_mute.source" => state
             .rt
-            .block_on(state.client.inputs().list(None))?
+            .block_on(client.inputs().list(None))?
             .iter()
             .map(|i| i.id.name.clone())
             .collect::<Vec<String>>()
@@ -240,6 +270,28 @@ fn get_enum(state: &PluginState, id: &str) -> Result<String, Box<dyn std::error:
     })
 }
 
+fn get_config_value(state: &PluginState, id: &str) -> Result<String, String> {
+    Ok(match id {
+        "host" => state.config.host.clone(),
+        "port" => state.config.port.to_string(),
+        "password" => state.config.password.clone().unwrap_or_default(),
+        _ => unreachable!(),
+    })
+}
+
+fn set_config_value(state: &mut PluginState, id: &str, value: &Args) -> Result<(), String> {
+    match id {
+        #[allow(clippy::assigning_clones)]
+        "host" => state.config.host = value.get(0).string().to_owned(),
+        #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
+        "port" => state.config.port = value.get(0).int() as u16,
+        "password" => state.config.password = Some(value.get(0).string().to_owned()),
+        _ => unreachable!(),
+    }
+
+    Ok(())
+}
+
 export_plugin! {
     PluginBuilder::new("rustdeck_obs", "Rustdeck OBS", "A plugin to manage OBS through websocket")
         .init(decorate_fn_init!(init))
@@ -247,6 +299,8 @@ export_plugin! {
         .get_variable(decorate_fn_get_variable!(get_variable))
         .run_action(decorate_fn_run_action!(run_action))
         .get_enum(decorate_fn_get_enum!(get_enum))
+        .get_config_value(decorate_fn_get_config_value!(get_config_value))
+        .set_config_value(decorate_fn_set_config_value!(set_config_value))
         .config_option(ConfigOption::new("host", "Host", "The host of the OBS websocket", Type::String))
         .config_option(ConfigOption::new("port", "Port", "The port of the OBS websocket", Type::Int))
         .variable(Variable::new("scene", "Scene", Type::String))

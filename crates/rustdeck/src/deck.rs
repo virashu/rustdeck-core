@@ -98,6 +98,8 @@ impl Deck {
     pub fn run(&self) {
         self.plugin_store.init_all();
 
+        self.update_config("rustdeck_obs.password".into(), "aaaaaa".into());
+
         let mut inst = Instant::now();
 
         loop {

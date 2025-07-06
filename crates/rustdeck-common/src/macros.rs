@@ -1,23 +1,8 @@
 #[macro_export]
 macro_rules! decorate_fn_init {
     ( $user_fn_init:expr ) => {{
-        unsafe extern "C" fn _fn_init() -> $crate::proto::Result {
-            match ($user_fn_init)() {
-                Ok(state) => {
-                    let raw_state = ::std::boxed::Box::into_raw(::std::boxed::Box::new(state));
-                    $crate::proto::Result {
-                        status: 0,
-                        content: raw_state.cast(),
-                    }
-                }
-                Err(e) => $crate::proto::Result {
-                    status: 1,
-                    content: ::std::ffi::CString::new(e.to_string())
-                        .unwrap()
-                        .into_raw()
-                        .cast(),
-                },
-            }
+        unsafe extern "C-unwind" fn _fn_init() -> $crate::Result {
+            $crate::Result::from(($user_fn_init)())
         }
 
         _fn_init
@@ -27,9 +12,9 @@ macro_rules! decorate_fn_init {
 #[macro_export]
 macro_rules! decorate_fn_update {
     ( $user_fn_update:expr ) => {{
-        unsafe extern "C" fn _fn_update(state: *mut ::std::ffi::c_void) {
-            let user_state = unsafe { &mut *state.cast() };
-            ($user_fn_update)(user_state);
+        unsafe extern "C-unwind" fn _fn_update(state: *mut ::std::ffi::c_void) -> $crate::Result {
+            let state = unsafe { &mut *state.cast() };
+            $crate::Result::from(($user_fn_update)(state))
         }
 
         _fn_update
@@ -39,27 +24,13 @@ macro_rules! decorate_fn_update {
 #[macro_export]
 macro_rules! decorate_fn_get_variable {
     ( $user_fn_get_variable:expr ) => {{
-        unsafe extern "C" fn _fn_get_variable(
+        unsafe extern "C-unwind" fn _fn_get_variable(
             state: *mut ::std::ffi::c_void,
             id: *const ::std::ffi::c_char,
-        ) -> $crate::proto::Result {
+        ) -> $crate::Result {
             let state = unsafe { &mut *state.cast() };
             let id = unsafe { $crate::util::ptr_to_str(id) };
-            let res = ($user_fn_get_variable)(state, id);
-
-            match res {
-                Ok(value) => $crate::proto::Result {
-                    status: 0,
-                    content: ::std::ffi::CString::new(value).unwrap().into_raw().cast(),
-                },
-                Err(e) => $crate::proto::Result {
-                    status: 1,
-                    content: ::std::ffi::CString::new(e.to_string())
-                        .unwrap()
-                        .into_raw()
-                        .cast(),
-                },
-            }
+            $crate::Result::from(($user_fn_get_variable)(state, id))
         }
 
         _fn_get_variable
@@ -69,27 +40,15 @@ macro_rules! decorate_fn_get_variable {
 #[macro_export]
 macro_rules! decorate_fn_run_action {
     ( $user_fn_run_action:expr ) => {{
-        unsafe extern "C" fn _fn_run_action(
+        unsafe extern "C-unwind" fn _fn_run_action(
             state: *mut ::std::ffi::c_void,
             id: *const ::std::ffi::c_char,
             args: *const $crate::proto::Arg,
-        ) -> $crate::proto::Result {
+        ) -> $crate::Result {
             let user_state = unsafe { &mut *state.cast() };
-            let id = unsafe { ::std::ffi::CStr::from_ptr(id).to_str().unwrap() };
+            let id = unsafe { $crate::util::ptr_to_str(id) };
             let args = $crate::Args::from(args);
-            match ($user_fn_run_action)(user_state, id, &args) {
-                Ok(_) => $crate::proto::Result {
-                    status: 0,
-                    content: ::std::ptr::null_mut(),
-                },
-                Err(e) => $crate::proto::Result {
-                    status: 1,
-                    content: ::std::ffi::CString::new(e.to_string())
-                        .unwrap()
-                        .into_raw()
-                        .cast(),
-                },
-            }
+            $crate::Result::from(($user_fn_run_action)(user_state, id, &args))
         }
 
         _fn_run_action
@@ -99,33 +58,57 @@ macro_rules! decorate_fn_run_action {
 #[macro_export]
 macro_rules! decorate_fn_get_enum {
     ( $user_fn_get_enum:expr ) => {{
-        unsafe extern "C" fn _get_enum(
+        unsafe extern "C-unwind" fn _get_enum(
             state: *mut ::std::ffi::c_void,
             id: *const ::std::ffi::c_char,
-        ) -> $crate::proto::Result {
+        ) -> $crate::Result {
             let state = unsafe { &mut *state.cast() };
-            let id = $crate::util::ptr_to_str(id);
-            match ($user_fn_get_enum)(state, id) {
-                Ok(value) => $crate::proto::Result {
-                    status: 0,
-                    content: ::std::ffi::CString::new(value).unwrap().into_raw().cast(),
-                },
-                Err(e) => $crate::proto::Result {
-                    status: 1,
-                    content: ::std::ffi::CString::new(e.to_string())
-                        .unwrap()
-                        .into_raw()
-                        .cast(),
-                },
-            }
+            let id = unsafe { $crate::util::ptr_to_str(id) };
+            $crate::Result::from(($user_fn_get_enum)(state, id))
         }
 
         ::std::boxed::Box::into_raw(::std::boxed::Box::new(
-            _get_enum
-                as unsafe extern "C" fn(
-                    *mut ::std::ffi::c_void,
-                    *const ::std::ffi::c_char,
-                ) -> $crate::proto::Result,
+            _get_enum as $crate::proto::FnGetEnum,
+        ))
+        .cast_const()
+    }};
+}
+
+#[macro_export]
+macro_rules! decorate_fn_get_config_value {
+    ( $user_fn_get_config_value:expr ) => {{
+        unsafe extern "C-unwind" fn _get_config_value(
+            state: *mut ::std::ffi::c_void,
+            id: *const ::std::ffi::c_char,
+        ) -> $crate::Result {
+            let state = unsafe { &mut *state.cast() };
+            let id = unsafe { $crate::util::ptr_to_str(id) };
+            $crate::Result::from(($user_fn_get_config_value)(state, id))
+        }
+
+        ::std::boxed::Box::into_raw(::std::boxed::Box::new(
+            _get_config_value as $crate::proto::FnGetConfigValue,
+        ))
+        .cast_const()
+    }};
+}
+
+#[macro_export]
+macro_rules! decorate_fn_set_config_value {
+    ( $user_fn_set_config_value:expr ) => {{
+        unsafe extern "C-unwind" fn _set_config_value(
+            state: *mut ::std::ffi::c_void,
+            id: *const ::std::ffi::c_char,
+            value: *const $crate::proto::Arg,
+        ) -> $crate::Result {
+            let state = unsafe { &mut *state.cast() };
+            let id = unsafe { $crate::util::ptr_to_str(id) };
+            let value = $crate::Args::from(value);
+            $crate::Result::from(($user_fn_set_config_value)(state, id, &value))
+        }
+
+        ::std::boxed::Box::into_raw(::std::boxed::Box::new(
+            _set_config_value as $crate::proto::FnSetConfigValue,
         ))
         .cast_const()
     }};

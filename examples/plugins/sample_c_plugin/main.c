@@ -10,10 +10,10 @@ init()
   return (Result){ .status = 0 };
 }
 
-void
+Result
 update(void* state)
 {
-  return;
+  return (Result){};
 }
 
 Result
@@ -25,7 +25,7 @@ get_variable(void* state, const char* id)
     return (Result){ .content = strdup("Value of variable B") };
   }
 
-  return (Result){ .status = 1 };
+  return (Result){ .status = 1, .content = NULL };
 }
 
 Result
