@@ -24,6 +24,7 @@ impl IconStore {
         }
     }
 
+    #[must_use]
     pub fn to_config(&self) -> HashMap<String, String> {
         self.icons.clone()
     }
@@ -73,6 +74,7 @@ impl IconStore {
     )]
     pub fn add_icon(&mut self) {}
 
+    #[must_use]
     pub fn keys(&self) -> Vec<String> {
         self.icons.keys().cloned().collect()
     }

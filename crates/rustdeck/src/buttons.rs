@@ -41,6 +41,7 @@ pub struct DeckButtonPos {
 }
 
 impl DeckButtonPos {
+    #[must_use]
     pub const fn from_yx(value: (u32, u32)) -> Self {
         Self {
             y: value.0,
@@ -48,6 +49,7 @@ impl DeckButtonPos {
         }
     }
 
+    #[must_use]
     pub const fn as_yx(&self) -> (u32, u32) {
         (self.y, self.x)
     }
