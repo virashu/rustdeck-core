@@ -43,6 +43,8 @@ pub struct Plugin {
 }
 
 impl Plugin {
+    /// # Errors
+    /// Check [`PluginLoadError`]
     pub fn try_load<P>(path: P) -> Result<Self, PluginLoadError>
     where
         P: AsRef<OsStr> + Debug,
@@ -63,6 +65,11 @@ impl Plugin {
         }
     }
 
+    /// # Errors
+    /// Check [`PluginLoadError`]
+    ///
+    /// # Safety
+    /// Pointer is checked for null.
     pub unsafe fn try_from_ptr(ptr: *const FFIPlugin) -> Result<Self, PluginLoadError> {
         unsafe {
             let plugin = ptr.as_ref().ok_or(PluginLoadError::BuildError)?;
@@ -81,6 +88,7 @@ impl Plugin {
             let variables = if plugin.variables.is_null() {
                 Vec::new()
             } else {
+                #[allow(clippy::missing_panics_doc, reason = "checked")]
                 (0..isize::MAX)
                     .map_while(|offset| plugin.variables.offset(offset).as_ref().unwrap().as_ref())
                     .map(Variable::from_ffi_ref)
@@ -90,6 +98,7 @@ impl Plugin {
             let actions = if plugin.actions.is_null() {
                 Vec::new()
             } else {
+                #[allow(clippy::missing_panics_doc, reason = "checked")]
                 (0..isize::MAX)
                     .map_while(|offset| plugin.actions.offset(offset).as_ref().unwrap().as_ref())
                     .map(Action::from_ffi_ref)
@@ -99,6 +108,7 @@ impl Plugin {
             let config_options = if plugin.config_options.is_null() {
                 Vec::new()
             } else {
+                #[allow(clippy::missing_panics_doc, reason = "checked")]
                 (0..isize::MAX)
                     .map_while(|offset| {
                         plugin
@@ -127,6 +137,10 @@ impl Plugin {
         }
     }
 
+    /// Initializes the plugin by calling `fn_init` provided via FFI
+    ///
+    /// # Errors
+    /// Returns error description provided by plugin binary.
     pub fn init(&mut self) -> Result<(), String> {
         unsafe {
             let state_res = (self.inner.fn_init)();
@@ -150,6 +164,13 @@ impl Plugin {
         Ok(())
     }
 
+    /// Calls `fn_update` of the plugin.
+    ///
+    /// # Panics
+    /// Panics if plugin is not initialized yet.
+    ///
+    /// # Errors
+    /// Returns error description provided by plugin binary.
     pub fn update(&mut self) -> Result<(), String> {
         let state = self.state.expect("Plugin is not initialized");
 
@@ -184,6 +205,12 @@ impl Plugin {
     }
 
     /// Validate args and run action
+    ///
+    /// # Panics
+    /// Panics if plugin is not initialized yet.
+    ///
+    /// # Errors
+    /// Returns error description provided by plugin binary.
     pub fn run_action(&self, act_id: String, args: &[String]) -> Result<(), ActionError> {
         let state = self.state.expect("Plugin is not initialized");
 
@@ -221,6 +248,13 @@ impl Plugin {
         Ok(())
     }
 
+    /// Get a variable of plugin
+    ///
+    /// # Panics
+    /// Panics if plugin is not initialized yet.
+    ///
+    /// # Errors
+    /// Returns error description provided by plugin binary.
     pub fn get_variable<T>(&self, id: T) -> Result<String, String>
     where
         T: AsRef<str>,
@@ -250,6 +284,8 @@ impl Plugin {
         }
     }
 
+    /// # Errors
+    /// Returns error if parsing fails
     pub fn parse_args(
         proto: &[ActionArg],
         args: &[String],
@@ -288,6 +324,13 @@ impl Plugin {
         Ok(parsed)
     }
 
+    /// Get available enum arg variations.
+    ///
+    /// # Panics
+    /// Panics if plugin is not initialized yet.
+    ///
+    /// # Errors
+    /// Returns error description provided by plugin binary.
     pub fn get_enum_arg<T>(&self, id: T) -> Result<Vec<String>, String>
     where
         T: AsRef<str>,
@@ -317,6 +360,13 @@ impl Plugin {
         }
     }
 
+    /// Get config value of plugin.
+    ///
+    /// # Panics
+    /// Panics if plugin is not initialized yet.
+    ///
+    /// # Errors
+    /// Returns error description provided by plugin binary.
     pub fn get_config_value<T>(&mut self, id: T) -> Result<String, String>
     where
         T: AsRef<str>,
@@ -346,6 +396,13 @@ impl Plugin {
         }
     }
 
+    /// Set config value of plugin.
+    ///
+    /// # Panics
+    /// Panics if plugin is not initialized yet.
+    ///
+    /// # Errors
+    /// Returns error description provided by plugin binary.
     pub fn set_config_value<T>(&mut self, id: T, value: String) -> Result<(), String>
     where
         T: AsRef<str>,
