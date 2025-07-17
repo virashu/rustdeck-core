@@ -1,17 +1,23 @@
-use std::{collections::HashMap, io, path::Path, time::Duration};
+use std::{collections::HashMap, io, path::Path};
 
 use parking_lot::RwLock;
+use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
 use crate::{
     buttons::RawDeckButtonAction,
+    constants::{PLUGIN_GET_VARIABLE_TIMEOUT, PLUGIN_INIT_TIMEOUT, PLUGIN_UPDATE_TIMEOUT},
     models::{
         PluginAction, PluginActionArgsData, PluginActionGroup, PluginConfigOption,
         PluginConfigOptionGroup, PluginData, PluginVariable, PluginVariableGroup,
     },
-    plugins::util::TimeoutError,
 };
 
-use super::{Plugin, error::ActionError, load_plugins_at, util::timeout};
+use super::{
+    Plugin,
+    error::ActionError,
+    load_plugins_at,
+    util::{TimeoutError, timeout},
+};
 
 pub struct PluginStore {
     plugins: RwLock<HashMap<String, RwLock<Plugin>>>,
@@ -43,19 +49,12 @@ impl PluginStore {
         tracing::info!("Initializing plugins...");
 
         {
-            self.plugins.read().iter().for_each(|(id, p)| {
+            self.plugins.read().par_iter().for_each(|(id, p)| {
                 tracing::info!("Initializing plugin {id:?}...");
 
-                match timeout(|| p.write().init(), Duration::from_secs(10)) {
-                    // Ok
-                    Ok(Ok(())) => {
-                        tracing::info!("Initialized plugin {id:?}");
-                    }
-                    // Error in plugin
-                    Ok(Err(e)) => {
-                        tracing::warn!("Failed to initialize plugin {id:?}: {e}");
-                    }
-                    // Timeout
+                match timeout(|| p.write().init(), PLUGIN_INIT_TIMEOUT) {
+                    Ok(Ok(())) => tracing::info!("Initialized plugin {id:?}"),
+                    Ok(Err(e)) => tracing::warn!("Failed to initialize plugin {id:?}: {e}"),
                     Err(TimeoutError()) => {
                         tracing::warn!("Plugin {id:?} took to long to initialize.");
                     }
@@ -67,15 +66,12 @@ impl PluginStore {
     }
 
     pub fn update_all(&self) {
-        self.plugins.read().values().for_each(|p| {
-            let mut lock = p.write();
-            _ = lock.update().inspect_err(|e| {
-                tracing::warn!(
-                    "A error occurred while updating plugin {:?}: {}",
-                    lock.id,
-                    e
-                );
-            });
+        self.plugins.read().par_iter().for_each(|(id, p)| {
+            match timeout(|| p.write().update(), PLUGIN_UPDATE_TIMEOUT) {
+                Ok(Ok(())) => {}
+                Ok(Err(e)) => tracing::warn!("A error occurred while updating plugin {id:?}: {e}",),
+                Err(TimeoutError()) => tracing::warn!("Plugin {id:?} took to long to update."),
+            }
         });
     }
 
@@ -97,7 +93,10 @@ impl PluginStore {
 
         let id_ = i.to_string();
 
-        match timeout(|| plugin.read().get_variable(id_), Duration::from_secs(10)) {
+        match timeout(
+            || plugin.read().get_variable(id_),
+            PLUGIN_GET_VARIABLE_TIMEOUT,
+        ) {
             Ok(Ok(s)) => Ok(s),
             Ok(Err(e)) => Err(e),
             Err(TimeoutError()) => Err(String::from("Timeout")),
