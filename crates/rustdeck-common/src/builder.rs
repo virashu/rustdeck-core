@@ -38,6 +38,7 @@ impl Variable {
         }
     }
 
+    #[must_use]
     pub fn build(self) -> *const proto::Variable {
         Box::into_raw(Box::new(proto::Variable {
             id: util::str_to_ptr(self.id),

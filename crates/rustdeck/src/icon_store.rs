@@ -3,9 +3,11 @@ use std::collections::HashMap;
 #[cfg(feature = "icon_store_b64")]
 use base64::{Engine, prelude::BASE64_STANDARD};
 
+#[derive(thiserror::Error, Debug)]
 pub enum IconStoreGetError {
+    #[error("Icon not found")]
     NotFound,
-    #[allow(dead_code)]
+    #[error("Failed to load icon: {0}")]
     IoError(std::io::Error),
 }
 
