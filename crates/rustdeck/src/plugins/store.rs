@@ -1,11 +1,4 @@
-use std::{
-    collections::HashMap,
-    io,
-    path::Path,
-    sync::Arc,
-    thread::{self, JoinHandle},
-    time::Duration,
-};
+use std::{collections::HashMap, io, path::Path, time::Duration};
 
 use parking_lot::RwLock;
 
@@ -15,28 +8,13 @@ use crate::{
         PluginAction, PluginActionArgsData, PluginActionGroup, PluginConfigOption,
         PluginConfigOptionGroup, PluginData, PluginVariable, PluginVariableGroup,
     },
-    plugins::error::ActionError,
+    plugins::util::TimeoutError,
 };
 
-use super::{Plugin, load_plugins_at};
+use super::{Plugin, error::ActionError, load_plugins_at, util::timeout};
 
 pub struct PluginStore {
-    plugins: RwLock<HashMap<String, Arc<RwLock<Plugin>>>>,
-    plugins_uninit: RwLock<Vec<Arc<RwLock<Plugin>>>>,
-}
-
-fn timeout<T>(handle: JoinHandle<T>, dur: Duration) -> Result<T, ()> {
-    let timer = std::time::Instant::now();
-
-    while !handle.is_finished() && timer.elapsed() < dur {
-        std::thread::sleep(std::time::Duration::from_millis(100));
-    }
-
-    if handle.is_finished() {
-        Ok(handle.join().unwrap())
-    } else {
-        Err(())
-    }
+    plugins: RwLock<HashMap<String, RwLock<Plugin>>>,
 }
 
 impl PluginStore {
@@ -54,29 +32,21 @@ impl PluginStore {
         let plugins = RwLock::new(
             plugins
                 .into_iter()
-                .map(|p| (p.id.clone(), Arc::new(RwLock::new(p))))
+                .map(|p| (p.id.clone(), RwLock::new(p)))
                 .collect(),
         );
 
-        Ok(Self {
-            plugins,
-            plugins_uninit: RwLock::new(Vec::new()),
-        })
+        Ok(Self { plugins })
     }
 
     pub fn init_all(&self) {
         tracing::info!("Initializing plugins...");
 
-        let mut uninit = Vec::new();
-
         {
             self.plugins.read().iter().for_each(|(id, p)| {
                 tracing::info!("Initializing plugin {id:?}...");
 
-                let ref_ = p.clone();
-                let handle = thread::spawn(move || ref_.write().init());
-
-                match timeout(handle, Duration::from_secs(10)) {
+                match timeout(|| p.write().init(), Duration::from_secs(10)) {
                     // Ok
                     Ok(Ok(())) => {
                         tracing::info!("Initialized plugin {id:?}");
@@ -84,10 +54,9 @@ impl PluginStore {
                     // Error in plugin
                     Ok(Err(e)) => {
                         tracing::warn!("Failed to initialize plugin {id:?}: {e}");
-                        uninit.push(id.clone());
                     }
                     // Timeout
-                    Err(()) => {
+                    Err(TimeoutError()) => {
                         tracing::warn!("Plugin {id:?} took to long to initialize.");
                     }
                 }
@@ -95,17 +64,6 @@ impl PluginStore {
         }
 
         tracing::info!("Initialized plugins");
-
-        {
-            let mut plugins = self.plugins.write();
-            let mut uninit_vec = self.plugins_uninit.write();
-
-            for id in uninit {
-                #[allow(clippy::missing_panics_doc)]
-                let plugin = plugins.remove(&id).unwrap();
-                uninit_vec.push(plugin);
-            }
-        }
     }
 
     pub fn update_all(&self) {
@@ -137,14 +95,12 @@ impl PluginStore {
             ));
         }
 
-        let ref_ = plugin.clone();
         let id_ = i.to_string();
-        let handle = thread::spawn(move || ref_.read().get_variable(id_));
 
-        match timeout(handle, Duration::from_secs(10)) {
+        match timeout(|| plugin.read().get_variable(id_), Duration::from_secs(10)) {
             Ok(Ok(s)) => Ok(s),
             Ok(Err(e)) => Err(e),
-            Err(()) => Err(String::from("Timeout")),
+            Err(TimeoutError()) => Err(String::from("Timeout")),
         }
     }
 

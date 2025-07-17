@@ -74,6 +74,10 @@ impl std::fmt::Display for PluginLoadError {
 impl std::error::Error for PluginLoadError {}
 
 #[derive(thiserror::Error, Debug)]
+#[error("Plugin is not initialized")]
+pub struct InitError();
+
+#[derive(thiserror::Error, Debug)]
 pub enum ActionError {
     #[error("Wrong action format: '{0}'")]
     InvalidFormat(String),
@@ -85,4 +89,6 @@ pub enum ActionError {
     InvalidArgs(String),
     #[error("Plugin returned an error: {0}")]
     PluginError(String),
+    #[error(transparent)]
+    InitError(#[from] InitError),
 }

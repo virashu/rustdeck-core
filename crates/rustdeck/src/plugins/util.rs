@@ -1,23 +1,26 @@
-// use std::ffi::{CStr, CString, c_char};
+use std::{
+    thread,
+    time::{Duration, Instant},
+};
 
-// pub unsafe fn read_drop_pointer(ptr: *mut c_char) -> String {
-//     if ptr.is_null() {
-//         return String::new();
-//     }
+#[derive(thiserror::Error, Debug)]
+#[error("Action timed out")]
+pub struct TimeoutError();
 
-//     unsafe { CString::from_raw(ptr) }.into_string().unwrap()
-// }
+pub fn timeout<F: FnOnce() -> T + Send, T: Send>(f: F, dur: Duration) -> Result<T, TimeoutError> {
+    thread::scope(|s| {
+        let handle = s.spawn(f);
 
-// pub unsafe fn read_drop_pointer(ptr: *mut c_char) -> String {
-//     if ptr.is_null() {
-//         return String::new();
-//     }
+        let timer = Instant::now();
 
-//     let c_str: &CStr = unsafe { CStr::from_ptr(ptr) };
-//     let str_slice: &str = c_str.to_str().unwrap();
-//     let string = str_slice.to_owned();
+        while !handle.is_finished() && timer.elapsed() < dur {
+            thread::sleep(Duration::from_millis(100));
+        }
 
-//     unsafe { std::ptr::drop_in_place(ptr) };
-
-//     string
-// }
+        if handle.is_finished() {
+            Ok(handle.join().unwrap())
+        } else {
+            Err(TimeoutError())
+        }
+    })
+}

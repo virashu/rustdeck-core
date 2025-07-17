@@ -5,7 +5,7 @@ mod plugin;
 mod proto;
 mod safe_arg;
 mod store;
-// mod util;
+mod util;
 
 pub use datatype::PluginDataType;
 pub use loading::load_plugins_at;

@@ -17,7 +17,10 @@ use super::{
 };
 use crate::{
     constants::DECK_ACTION_ID,
-    plugins::{error::ActionError, safe_arg::SafeArg},
+    plugins::{
+        error::{ActionError, InitError},
+        safe_arg::SafeArg,
+    },
 };
 
 /// Wrapper to isolate all the unsafe operations
@@ -164,6 +167,12 @@ impl Plugin {
         Ok(())
     }
 
+    /// Test if plugin is initialized and ready to work.
+    #[must_use]
+    pub fn is_init(&self) -> bool {
+        self.state.is_some()
+    }
+
     /// Calls `fn_update` of the plugin.
     ///
     /// # Panics
@@ -204,6 +213,10 @@ impl Plugin {
         }
     }
 
+    fn try_get_state(&self) -> Result<*mut c_void, InitError> {
+        self.state.ok_or(InitError())
+    }
+
     /// Validate args and run action
     ///
     /// # Panics
@@ -212,7 +225,7 @@ impl Plugin {
     /// # Errors
     /// Returns error description provided by plugin binary.
     pub fn run_action(&self, act_id: String, args: &[String]) -> Result<(), ActionError> {
-        let state = self.state.expect("Plugin is not initialized");
+        let state = self.try_get_state()?;
 
         let Some(action_prototype) = self.actions.iter().find(|v| v.id == act_id) else {
             return Err(ActionError::ActionNotFound {
@@ -259,7 +272,7 @@ impl Plugin {
     where
         T: AsRef<str>,
     {
-        let state = self.state.expect("Plugin is not initialized");
+        let state = self.try_get_state().map_err(|e| e.to_string())?;
 
         unsafe {
             let res = (self.inner.fn_get_variable)(
@@ -335,7 +348,7 @@ impl Plugin {
     where
         T: AsRef<str>,
     {
-        let state = self.state.expect("Plugin is not initialized");
+        let state = self.try_get_state().map_err(|e| e.to_string())?;
 
         unsafe {
             let res = (self.inner.fn_get_enum.as_ref().unwrap())(
@@ -371,7 +384,7 @@ impl Plugin {
     where
         T: AsRef<str>,
     {
-        let state = self.state.expect("Plugin is not initialized");
+        let state = self.try_get_state().map_err(|e| e.to_string())?;
 
         unsafe {
             let res = (self.inner.fn_get_config_value.as_ref().unwrap())(
@@ -407,7 +420,7 @@ impl Plugin {
     where
         T: AsRef<str>,
     {
-        let state = self.state.expect("Plugin is not initialized");
+        let state = self.try_get_state().map_err(|e| e.to_string())?;
 
         let arg = SafeArg::String(Arg {
             c: ManuallyDrop::new(CString::new(value).unwrap())
