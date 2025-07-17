@@ -1,4 +1,8 @@
-use std::{collections::HashMap, sync::Arc, time::Instant};
+use std::{
+    collections::HashMap,
+    sync::Arc,
+    time::{Duration, Instant},
+};
 
 use indexmap::IndexMap;
 use parking_lot::RwLock;
@@ -16,13 +20,6 @@ use crate::{
     },
     plugins::{PluginDataType, PluginStore},
 };
-
-mod config {
-    use std::time::Duration;
-
-    /// Update thread loop interval in millis
-    pub const UPDATE_INTERVAL: Duration = Duration::from_millis(1000);
-}
 
 #[derive(Debug, serde::Serialize)]
 pub struct DeckScreen {
@@ -102,17 +99,17 @@ impl Deck {
         })
     }
 
-    pub fn run(&self) {
+    pub fn init(&self) {
         self.plugin_store.init_all();
 
-        #[allow(clippy::missing_panics_doc, reason = "temporary")]
-        self.update_config("rustdeck_obs.password".into(), "aaaaaa".into())
-            .unwrap();
+        _ = self.update_config("rustdeck_obs.password".into(), "aaaaaa".into());
+    }
 
+    pub fn run(&self, update_interval: Duration) {
         let mut inst = Instant::now();
 
         loop {
-            if inst.elapsed() > config::UPDATE_INTERVAL {
+            if inst.elapsed() > update_interval {
                 self.plugin_store.update_all();
 
                 inst = Instant::now();

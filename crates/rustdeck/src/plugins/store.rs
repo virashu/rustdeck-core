@@ -1,4 +1,11 @@
-use std::{collections::HashMap, io, path::Path, sync::Arc};
+use std::{
+    collections::HashMap,
+    io,
+    path::Path,
+    sync::Arc,
+    thread::{self, JoinHandle},
+    time::Duration,
+};
 
 use parking_lot::RwLock;
 
@@ -14,8 +21,22 @@ use crate::{
 use super::{Plugin, load_plugins_at};
 
 pub struct PluginStore {
-    plugins: RwLock<HashMap<String, RwLock<Plugin>>>,
-    plugins_uninit: Arc<RwLock<Vec<Plugin>>>,
+    plugins: RwLock<HashMap<String, Arc<RwLock<Plugin>>>>,
+    plugins_uninit: RwLock<Vec<Arc<RwLock<Plugin>>>>,
+}
+
+fn timeout<T>(handle: JoinHandle<T>, dur: Duration) -> Result<T, ()> {
+    let timer = std::time::Instant::now();
+
+    while !handle.is_finished() && timer.elapsed() < dur {
+        std::thread::sleep(std::time::Duration::from_millis(100));
+    }
+
+    if handle.is_finished() {
+        Ok(handle.join().unwrap())
+    } else {
+        Err(())
+    }
 }
 
 impl PluginStore {
@@ -33,13 +54,13 @@ impl PluginStore {
         let plugins = RwLock::new(
             plugins
                 .into_iter()
-                .map(|p| (p.id.clone(), RwLock::new(p)))
+                .map(|p| (p.id.clone(), Arc::new(RwLock::new(p))))
                 .collect(),
         );
 
         Ok(Self {
             plugins,
-            plugins_uninit: Arc::new(RwLock::new(Vec::new())),
+            plugins_uninit: RwLock::new(Vec::new()),
         })
     }
 
@@ -49,19 +70,31 @@ impl PluginStore {
         let mut uninit = Vec::new();
 
         {
-            self.plugins.read().values().for_each(|p| {
-                let mut lock = p.write();
-                _ = lock
-                    .init()
-                    .inspect(|()| tracing::info!("Initialized plugin {:?}", lock.id))
-                    .inspect_err(|e| {
-                        tracing::warn!("Failed to initialize plugin {:?}: {}", lock.id, e);
-                        uninit.push(lock.id.clone());
-                    });
-            });
+            self.plugins.read().iter().for_each(|(id, p)| {
+                tracing::info!("Initializing plugin {id:?}...");
 
-            tracing::info!("Initialized plugins");
+                let ref_ = p.clone();
+                let handle = thread::spawn(move || ref_.write().init());
+
+                match timeout(handle, Duration::from_secs(10)) {
+                    // Ok
+                    Ok(Ok(())) => {
+                        tracing::info!("Initialized plugin {id:?}");
+                    }
+                    // Error in plugin
+                    Ok(Err(e)) => {
+                        tracing::warn!("Failed to initialize plugin {id:?}: {e}");
+                        uninit.push(id.clone());
+                    }
+                    // Timeout
+                    Err(()) => {
+                        tracing::warn!("Plugin {id:?} took to long to initialize.");
+                    }
+                }
+            });
         }
+
+        tracing::info!("Initialized plugins");
 
         {
             let mut plugins = self.plugins.write();
@@ -69,7 +102,8 @@ impl PluginStore {
 
             for id in uninit {
                 #[allow(clippy::missing_panics_doc)]
-                uninit_vec.push(plugins.remove(&id).unwrap().into_inner());
+                let plugin = plugins.remove(&id).unwrap();
+                uninit_vec.push(plugin);
             }
         }
     }
@@ -95,16 +129,23 @@ impl PluginStore {
         let plugins = self.plugins.read();
         let plugin = plugins
             .get(plug_id)
-            .ok_or_else(|| format!("Cannot find plugin: `{plug_id}`"))?
-            .read();
+            .ok_or_else(|| format!("Cannot find plugin: `{plug_id}`"))?;
 
-        if !plugin.variables.iter().any(|v| v.id == i) {
+        if !plugin.read().variables.iter().any(|v| v.id == i) {
             return Err(format!(
                 "Plugin `{plug_id}` does not provide variable `{i}`"
             ));
         }
 
-        plugin.get_variable(i)
+        let ref_ = plugin.clone();
+        let id_ = i.to_string();
+        let handle = thread::spawn(move || ref_.read().get_variable(id_));
+
+        match timeout(handle, Duration::from_secs(10)) {
+            Ok(Ok(s)) => Ok(s),
+            Ok(Err(e)) => Err(e),
+            Err(()) => Err(String::from("Timeout")),
+        }
     }
 
     pub fn render_variable<S>(&self, id: S) -> String
@@ -261,12 +302,12 @@ impl PluginStore {
         #[allow(clippy::expect_fun_call)]
         let (plug_id, act_id) = id
             .split_once('.')
-            .expect(format!("Invalid arg id format: {id}").as_str());
+            .ok_or_else(|| format!("Invalid arg id format: {id}"))?;
 
         self.plugins
             .read()
             .get(plug_id)
-            .expect("Failed to find plugin")
+            .ok_or_else(|| String::from("Failed to find plugin"))?
             .read()
             .get_enum_arg(act_id)
     }

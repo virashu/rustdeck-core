@@ -1,7 +1,7 @@
 mod config;
 mod server;
 
-use std::{fs, sync::Arc, thread};
+use std::{fs, sync::Arc, thread, time::Duration};
 
 use rustdeck::Deck;
 
@@ -28,8 +28,10 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         &*paths::ICONS,
     )?);
 
+    deck.init();
+
     let deck_ref = deck.clone();
-    let deck_thread = thread::spawn(move || deck_ref.run());
+    let deck_thread = thread::spawn(move || deck_ref.run(Duration::from_secs(1)));
 
     crate::server::http::build_and_run_thread(&deck, "0.0.0.0", 8989);
 
