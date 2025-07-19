@@ -19,7 +19,9 @@ fn init() -> Result<PluginState, Box<dyn std::error::Error>> {
     })
 }
 
-fn update(_: &mut PluginState) {}
+fn update(state: &mut PluginState) {
+    state.player.update();
+}
 
 fn run_action(state: &PluginState, id: &str, _: &Args) -> Result<(), Box<dyn std::error::Error>> {
     match id {
@@ -35,14 +37,8 @@ fn run_action(state: &PluginState, id: &str, _: &Args) -> Result<(), Box<dyn std
     Ok(())
 }
 
-fn get_variable(_: &PluginState, id: &str) -> Result<String, String> {
-    let Ok(session) = std::panic::catch_unwind(MediaSession::new) else {
-        println!("Caught a panic in rustdeck-media while trying to create a session");
-        return Err(String::from("Failed to get session"));
-    };
-    let media_info = session.get_info();
-
-    // let media_info = state.player.get_info();
+fn get_variable(state: &PluginState, id: &str) -> Result<String, String> {
+    let media_info = state.player.get_info();
 
     Ok(match id {
         "title" => media_info.title,
