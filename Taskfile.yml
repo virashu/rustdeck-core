@@ -77,11 +77,6 @@ tasks:
       - 7z a -tzip -r ./dist/rustdeck.zip -w ./dist/pack/*
 
   mock_config:
-    deps:
-      - build_example_plugin
-      - build_example_c_plugin
-      - task: build_builtin_plugins
-
     cmds:
       - mkdir -p ./icons/
       - cp -r ./tests/test_resources/icons/ -t .
@@ -96,18 +91,15 @@ tasks:
 
   reset:
     deps: [clean]
-    cmds:
-      - rm -rf ./target
+    cmd: rm -rf ./target
 
-  run_test:
+  mock_run:
     deps: [mock_config]
-    cmds:
-      - cargo run --package rustdeck
+    cmd: { task: run }
 
   run:
     deps:
       - build_example_plugin
       - build_example_c_plugin
-      - task: build_builtin_plugins
-    cmds:
-      - cargo run --package rustdeck
+      - build_builtin_plugins
+    cmd: cargo run --package rustdeck

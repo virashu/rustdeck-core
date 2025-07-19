@@ -31,7 +31,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     deck.init();
 
     let deck_ref = deck.clone();
-    let deck_thread = thread::spawn(move || deck_ref.run(Duration::from_secs(1)));
+    let deck_thread = thread::spawn(move || deck_ref.run(Duration::from_millis(500)));
 
     crate::server::http::build_and_run_thread(&deck, "0.0.0.0", 8989);
 
