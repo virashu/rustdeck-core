@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 #[cfg(feature = "icon_store_b64")]
 use base64::{Engine, prelude::BASE64_STANDARD};
@@ -12,30 +15,35 @@ pub enum IconStoreGetError {
 }
 
 pub struct IconStore {
-    store_path: String,
-    icons: HashMap<String, String>,
+    store_path: PathBuf,
+    icons: HashMap<String, PathBuf>,
 }
 
 impl IconStore {
-    pub fn from_config(path: impl AsRef<str>, icons: HashMap<String, String>) -> Self {
+    pub fn from_config(path: impl AsRef<Path>, icons: HashMap<String, String>) -> Self {
         Self {
-            store_path: path.as_ref().to_owned(),
-            icons,
+            store_path: path.as_ref().to_path_buf(),
+            icons: icons
+                .into_iter()
+                .map(|(id, icon)| (id, PathBuf::from(icon)))
+                .collect(),
         }
     }
 
     #[must_use]
     pub fn to_config(&self) -> HashMap<String, String> {
-        self.icons.clone()
+        self.icons
+            .clone()
+            .iter()
+            .map(|(id, path)| (id.clone(), path.to_string_lossy().to_string()))
+            .collect()
     }
 
-    pub fn get_icon_path<S>(&self, id: S) -> Option<String>
+    pub fn get_icon_path<S>(&self, id: S) -> Option<PathBuf>
     where
         S: AsRef<str>,
     {
-        self.icons
-            .get(id.as_ref())
-            .map(|p| format!("{}/{p}", self.store_path))
+        self.icons.get(id.as_ref()).map(|p| self.store_path.join(p))
     }
 
     /// Get a raw icon
@@ -47,8 +55,8 @@ impl IconStore {
         S: AsRef<str>,
     {
         let icon_path = self.get_icon_path(id).ok_or(IconStoreGetError::NotFound)?;
-        std::fs::read(icon_path)
-            .inspect_err(|e| tracing::warn!("Failed to read registered image: {e}"))
+        std::fs::read(&icon_path)
+            .inspect_err(|e| tracing::warn!("Failed to read registered image ({icon_path:?}): {e}"))
             .map_err(IconStoreGetError::IoError)
     }
 

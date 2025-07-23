@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    path::Path,
     sync::Arc,
     time::{Duration, Instant},
 };
@@ -50,8 +51,8 @@ impl Deck {
     pub fn new(
         config: DeckConfig,
         config_callback: impl Fn(&DeckConfig) + Send + Sync + 'static,
-        plugins_path: impl AsRef<str>,
-        icons_path: impl AsRef<str>,
+        plugins_path: impl AsRef<Path>,
+        icons_path: impl AsRef<Path>,
     ) -> Result<Self, Box<dyn std::error::Error>> {
         let plugin_store = PluginStore::new(plugins_path)?;
         let icon_store = IconStore::from_config(icons_path, config.icons);
@@ -104,6 +105,9 @@ impl Deck {
 
         _ = self
             .update_config("rustdeck_obs.password".into(), "aaaaaa".into())
+            .inspect_err(|e| tracing::error!(%e));
+        _ = self
+            .update_config("rustdeck_obs.connect_timeout".into(), "1".into())
             .inspect_err(|e| tracing::error!(%e));
     }
 

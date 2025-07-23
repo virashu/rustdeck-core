@@ -1,6 +1,8 @@
 #![allow(clippy::unnecessary_wraps)]
 #![allow(unsafe_op_in_unsafe_fn)]
 
+use std::time::Duration;
+
 use rustdeck_common::{
     Args, Type,
     builder::{Action, ConfigOption, PluginBuilder, Variable},
@@ -12,6 +14,7 @@ struct Config {
     host: String,
     port: u16,
     password: Option<String>,
+    connect_timeout: Duration,
 }
 
 struct PluginState {
@@ -31,6 +34,7 @@ fn init() -> Result<PluginState, Box<dyn std::error::Error>> {
             host: "localhost".into(),
             port: 4455,
             password: None,
+            connect_timeout: obws::client::DEFAULT_CONNECT_TIMEOUT,
         },
         client: None,
     })
@@ -38,11 +42,22 @@ fn init() -> Result<PluginState, Box<dyn std::error::Error>> {
 
 fn update(state: &mut PluginState) -> Result<(), Box<dyn std::error::Error>> {
     if state.client.is_none() {
-        state.client = Some(state.rt.block_on(obws::Client::connect(
-            &state.config.host,
-            state.config.port,
-            state.config.password.clone(),
-        ))?);
+        let connect_config = obws::client::ConnectConfig {
+            host: &state.config.host,
+            port: state.config.port,
+            password: state.config.password.as_ref(),
+            connect_timeout: state.config.connect_timeout,
+
+            event_subscriptions: None,
+            dangerous: None,
+            broadcast_capacity: obws::client::DEFAULT_BROADCAST_CAPACITY,
+        };
+
+        let client = state
+            .rt
+            .block_on(obws::Client::connect_with_config(connect_config))?;
+
+        state.client = Some(client);
     }
 
     Ok(())
@@ -275,6 +290,7 @@ fn get_config_value(state: &PluginState, id: &str) -> Result<String, String> {
         "host" => state.config.host.clone(),
         "port" => state.config.port.to_string(),
         "password" => state.config.password.clone().unwrap_or_default(),
+        "connect_timeout" => state.config.connect_timeout.as_secs().to_string(),
         _ => unreachable!(),
     })
 }
@@ -286,6 +302,10 @@ fn set_config_value(state: &mut PluginState, id: &str, value: &Args) -> Result<(
         #[allow(clippy::cast_sign_loss, clippy::cast_possible_truncation)]
         "port" => state.config.port = value.get(0).int() as u16,
         "password" => state.config.password = Some(value.get(0).string().to_owned()),
+        "connect_timeout" => {
+            state.config.connect_timeout =
+                Duration::from_secs(value.get(0).int().try_into().unwrap());
+        }
         _ => unreachable!(),
     }
 
@@ -304,6 +324,7 @@ export_plugin! {
         .config_option(ConfigOption::new("host", "Host", "The host of the OBS websocket", Type::String))
         .config_option(ConfigOption::new("port", "Port", "The port of the OBS websocket", Type::Int))
         .config_option(ConfigOption::new("password", "Password", "Websocket password", Type::String))
+        .config_option(ConfigOption::new("connect_timeout", "Connect timeout", "", Type::Int))
         .variable(Variable::new("scene", "Scene", Type::String))
         .variable(Variable::new("profile", "Profile", Type::String))
         .variable(Variable::new("is_streaming", "Is Streaming", Type::Bool))

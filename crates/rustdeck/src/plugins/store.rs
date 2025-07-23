@@ -28,13 +28,10 @@ impl PluginStore {
     ///
     /// # Errors
     /// Error is returned if path cannot be read.
-    pub fn new<S>(path: S) -> Result<Self, io::Error>
-    where
-        S: AsRef<str>,
-    {
+    pub fn new(path: impl AsRef<Path>) -> Result<Self, io::Error> {
         tracing::info!("Loading plugins...");
 
-        let plugins = load_plugins_at(Path::new(path.as_ref()))?;
+        let plugins = load_plugins_at(path.as_ref())?;
         let plugins = RwLock::new(
             plugins
                 .into_iter()

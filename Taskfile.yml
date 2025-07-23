@@ -93,13 +93,12 @@ tasks:
     deps: [clean]
     cmd: rm -rf ./target
 
-  mock_run:
-    deps: [mock_config]
-    cmd: { task: run }
-
-  run:
+  build:
     deps:
       - build_example_plugin
       - build_example_c_plugin
       - build_builtin_plugins
+
+  run:
+    deps: [build]
     cmd: cargo run --package rustdeck
