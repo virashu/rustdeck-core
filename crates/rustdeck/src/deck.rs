@@ -33,6 +33,10 @@ pub enum ScreenRenameError {
     Conflict(String),
 }
 
+#[derive(thiserror::Error, Debug)]
+#[error("Screen {0:?} not found")]
+pub struct ScreenDeletionError(String);
+
 pub struct Deck {
     config: RwLock<DeckDimensionConfig>,
     config_callback: Arc<dyn Fn(&DeckConfig) + Send + Sync + 'static>,
@@ -49,7 +53,6 @@ impl Deck {
     /// Create a new deck with uninitialized plugins
     ///
     /// # Errors
-    ///
     /// This function will return an error if fails to read plugins dir
     pub fn new(
         config: DeckConfig,
@@ -410,18 +413,21 @@ impl Deck {
         Ok(())
     }
 
+    /// # Errors
+    /// This function will return an error if `id` is incorrect
     #[allow(clippy::significant_drop_tightening)]
-    pub fn delete_screen(&self, id: impl AsRef<str>) -> Result<(), ()> {
+    pub fn delete_screen(&self, id: impl AsRef<str>) -> Result<(), ScreenDeletionError> {
         let id = id.as_ref();
 
         if !self.screens.read().contains_key(id) {
-            return Err(());
+            return Err(ScreenDeletionError(String::from(id)));
         }
 
         {
             let screens_lock = self.screens.read();
             let mut current_lock = self.current_screen_id.write();
             if *current_lock == id {
+                #[allow(clippy::missing_panics_doc, reason = "checked")]
                 let id_of_prev = screens_lock
                     .get_index(screens_lock.get_index_of(id).unwrap() - 1)
                     .unwrap()
@@ -471,6 +477,8 @@ impl Deck {
         }
     }
 
+    /// # Errors
+    /// This function will return an error if call to external plugin results in a error
     pub fn get_enum_arg_variants(&self, id: impl AsRef<str>) -> Result<Vec<String>, String> {
         let id = id.as_ref();
 

@@ -72,10 +72,7 @@ impl PluginStore {
         });
     }
 
-    pub fn try_resolve_variable<S>(&self, id: S) -> Result<String, String>
-    where
-        S: AsRef<str>,
-    {
+    pub fn try_resolve_variable(&self, id: impl AsRef<str>) -> Result<String, String> {
         let (plug_id, i) = id.as_ref().split_once('.').ok_or("Wrong variable format")?;
         let plugins = self.plugins.read();
         let plugin = plugins
@@ -100,15 +97,14 @@ impl PluginStore {
         }
     }
 
-    pub fn render_variable<S>(&self, id: S) -> String
-    where
-        S: AsRef<str>,
-    {
+    pub fn render_variable(&self, id: impl AsRef<str>) -> String {
         match self.try_resolve_variable(id) {
             Err(s) | Ok(s) => s,
         }
     }
 
+    /// # Errors
+    /// See [`ActionError`]
     #[allow(clippy::significant_drop_tightening)]
     pub fn try_run_action(&self, act: &RawDeckButtonAction) -> Result<(), ActionError> {
         let (plug_id, act_id) = act
@@ -249,7 +245,6 @@ impl PluginStore {
             .collect()
     }
 
-    #[allow(clippy::needless_pass_by_value)]
     pub fn get_enum_arg_variants(&self, id: impl AsRef<str>) -> Result<Vec<String>, String> {
         let id = id.as_ref();
 

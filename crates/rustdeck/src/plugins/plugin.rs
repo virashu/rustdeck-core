@@ -561,7 +561,8 @@ mod tests {
     fn test_plugin() {
         let plugin = unsafe { Plugin::try_from_ptr(build()) };
         assert!(plugin.is_ok());
-        let plugin = plugin.unwrap();
+        let mut plugin = plugin.unwrap();
+        assert!(plugin.init().is_ok());
 
         assert_eq!(plugin.get_variable("counter").unwrap(), "0");
 

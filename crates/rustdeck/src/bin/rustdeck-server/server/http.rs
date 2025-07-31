@@ -66,7 +66,7 @@ async fn handle_new_screen(State(state): State<AxumState>, Path(id): Path<String
 async fn delete_screen(State(state): State<AxumState>, Path(id): Path<String>) -> StatusCode {
     match state.deck.delete_screen(&id) {
         Ok(()) => StatusCode::OK,
-        Err(()) => StatusCode::NOT_FOUND,
+        Err(_) => StatusCode::NOT_FOUND,
     }
 }
 
