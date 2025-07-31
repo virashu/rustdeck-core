@@ -1,4 +1,6 @@
-use std::ffi::{CString, c_void};
+use std::ffi::c_void;
+
+use crate::util;
 
 #[repr(C)]
 pub struct Result {
@@ -7,28 +9,21 @@ pub struct Result {
     pub content: *mut c_void,
 }
 
-#[allow(clippy::fallible_impl_from)]
-impl<E: ToString> From<std::result::Result<String, E>> for Result {
-    fn from(value: std::result::Result<String, E>) -> Self {
+impl Result {
+    pub fn from_string_result<E: ToString>(value: std::result::Result<String, E>) -> Self {
         match value {
             Ok(value) => Self {
                 status: 0,
-                content: ::std::ffi::CString::new(value).unwrap().into_raw().cast(),
+                content: util::str_to_ptr(value).cast(),
             },
             Err(e) => Self {
                 status: 1,
-                content: ::std::ffi::CString::new(e.to_string())
-                    .unwrap()
-                    .into_raw()
-                    .cast(),
+                content: util::str_to_ptr(e.to_string()).cast(),
             },
         }
     }
-}
 
-#[allow(clippy::fallible_impl_from)]
-impl<T, E: ToString> From<std::result::Result<*mut T, E>> for Result {
-    fn from(value: std::result::Result<*mut T, E>) -> Self {
+    pub fn from_ptr_result<T, E: ToString>(value: std::result::Result<*mut T, E>) -> Self {
         match value {
             Ok(value) => Self {
                 status: 0,
@@ -36,27 +31,12 @@ impl<T, E: ToString> From<std::result::Result<*mut T, E>> for Result {
             },
             Err(e) => Self {
                 status: 1,
-                content: ::std::ffi::CString::new(e.to_string())
-                    .unwrap()
-                    .into_raw()
-                    .cast(),
+                content: util::str_to_ptr(e.to_string()).cast(),
             },
         }
     }
-}
 
-impl From<()> for Result {
-    fn from((): ()) -> Self {
-        Self {
-            status: 0,
-            content: std::ptr::null_mut(),
-        }
-    }
-}
-
-#[allow(clippy::fallible_impl_from)]
-impl<T, E: ToString> From<std::result::Result<T, E>> for Result {
-    default fn from(value: std::result::Result<T, E>) -> Self {
+    pub fn from_any_result<T, E: ToString>(value: std::result::Result<T, E>) -> Self {
         match value {
             Ok(value) => Self {
                 status: 0,
@@ -64,8 +44,42 @@ impl<T, E: ToString> From<std::result::Result<T, E>> for Result {
             },
             Err(e) => Self {
                 status: 1,
-                content: CString::new(e.to_string()).unwrap().into_raw().cast(),
+                content: util::str_to_ptr(e.to_string()).cast(),
             },
         }
+    }
+}
+
+impl Default for Result {
+    fn default() -> Self {
+        Self {
+            status: 0,
+            content: std::ptr::null_mut(),
+        }
+    }
+}
+
+impl<E: ToString> From<std::result::Result<String, E>> for Result {
+    fn from(value: std::result::Result<String, E>) -> Self {
+        Self::from_string_result(value)
+    }
+}
+
+impl<T, E: ToString> From<std::result::Result<*mut T, E>> for Result {
+    fn from(value: std::result::Result<*mut T, E>) -> Self {
+        Self::from_ptr_result(value)
+    }
+}
+
+impl From<()> for Result {
+    fn from((): ()) -> Self {
+        Self::default()
+    }
+}
+
+#[allow(clippy::fallible_impl_from)]
+impl<T, E: ToString> From<std::result::Result<T, E>> for Result {
+    default fn from(value: std::result::Result<T, E>) -> Self {
+        Self::from_any_result(value)
     }
 }

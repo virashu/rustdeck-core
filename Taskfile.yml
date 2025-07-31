@@ -76,7 +76,7 @@ tasks:
 
       - 7z a -tzip -r ./dist/rustdeck.zip -w ./dist/pack/*
 
-  mock_config:
+  mock:
     cmds:
       - mkdir -p ./icons/
       - cp -r ./tests/test_resources/icons/ -t .

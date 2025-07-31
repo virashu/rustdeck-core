@@ -13,11 +13,14 @@
   - [Stream Deck](https://www.elgato.com/us/en/s/welcome-to-stream-deck)
   - [Macro Deck](https://macro-deck.app/)
 
+> [!IMPORTANT]
+> Project uses Rust's nightly `min-specialization` feature
+
 ## Build
 
 ### Taskfile
 
-Project uses `Taskfile`
+Project uses `Taskfile` (`go-task`)
 
 Run this command to produce `dist/rustdeck.zip` package:
 ```shell
