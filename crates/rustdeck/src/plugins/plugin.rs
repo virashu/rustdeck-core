@@ -457,10 +457,9 @@ unsafe impl Sync for Plugin {}
 #[cfg(test)]
 mod tests {
     use rustdeck_common::{
-        Args, Type, actions, args,
+        Args, Type,
         builder::{Action, PluginBuilder, Variable},
-        decl_action, decl_arg, decl_plugin, decl_variable, decorate_fn_get_variable,
-        decorate_fn_init, decorate_fn_run_action, decorate_fn_update, variables,
+        decorate_fn_get_variable, decorate_fn_init, decorate_fn_run_action, decorate_fn_update,
     };
 
     use super::*;
