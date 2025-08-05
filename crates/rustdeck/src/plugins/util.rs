@@ -7,9 +7,14 @@ use std::{
 #[error("Action timed out")]
 pub struct TimeoutError();
 
-pub fn timeout<F: FnOnce() -> T + Send, T: Send>(f: F, dur: Duration) -> Result<T, TimeoutError> {
+/// Block on execution of `func` and return its result.
+/// Returns [`TimeoutError`] if `func` took more time than `dur` to complete.
+pub fn timeout<F: FnOnce() -> T + Send, T: Send>(
+    func: F,
+    dur: Duration,
+) -> Result<T, TimeoutError> {
     thread::scope(|s| {
-        let handle = s.spawn(f);
+        let handle = s.spawn(func);
 
         let timer = Instant::now();
 

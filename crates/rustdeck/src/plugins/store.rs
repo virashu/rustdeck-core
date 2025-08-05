@@ -21,6 +21,7 @@ use super::{
 
 pub struct PluginStore {
     plugins: RwLock<HashMap<String, RwLock<Plugin>>>,
+    variable_cache: RwLock<HashMap<String, String>>,
 }
 
 impl PluginStore {
@@ -39,7 +40,10 @@ impl PluginStore {
                 .collect(),
         );
 
-        Ok(Self { plugins })
+        Ok(Self {
+            plugins,
+            variable_cache: RwLock::new(HashMap::new()),
+        })
     }
 
     pub fn init_all(&self) {
@@ -63,38 +67,70 @@ impl PluginStore {
     }
 
     pub fn update_all(&self) {
-        self.plugins.read().par_iter().for_each(|(id, p)| {
-            match timeout(|| p.write().update(), PLUGIN_UPDATE_TIMEOUT) {
-                Ok(Ok(())) => {}
-                Ok(Err(e)) => tracing::warn!("A error occurred while updating plugin {id:?}: {e}",),
-                Err(TimeoutError()) => tracing::warn!("Plugin {id:?} took to long to update."),
-            }
-        });
+        let vars = self
+            .plugins
+            .read()
+            .par_iter()
+            .filter_map(
+                |(id, p)| match timeout(|| p.write().update(), PLUGIN_UPDATE_TIMEOUT) {
+                    Ok(Ok(())) => Some(p),
+                    Ok(Err(e)) => {
+                        tracing::warn!("A error occurred while updating plugin {id:?}: {e}",);
+                        None
+                    }
+                    Err(TimeoutError()) => {
+                        tracing::warn!("Plugin {id:?} took to long to update.");
+                        None
+                    }
+                },
+            )
+            .map(|p| {
+                let lock = p.read();
+                lock.variables
+                    .iter()
+                    .map(|var| {
+                        (
+                            format!("{}.{}", lock.id, var.id),
+                            lock.get_variable(&var.id).unwrap(),
+                        )
+                    })
+                    .collect::<HashMap<String, String>>()
+            })
+            .flatten()
+            .collect::<HashMap<String, String>>();
+
+        *self.variable_cache.write() = vars;
     }
 
     pub fn try_resolve_variable(&self, id: impl AsRef<str>) -> Result<String, String> {
-        let (plug_id, i) = id.as_ref().split_once('.').ok_or("Wrong variable format")?;
-        let plugins = self.plugins.read();
-        let plugin = plugins
-            .get(plug_id)
-            .ok_or_else(|| format!("Cannot find plugin: `{plug_id}`"))?;
+        // let (plug_id, i) = id.as_ref().split_once('.').ok_or("Wrong variable format")?;
+        // let plugins = self.plugins.read();
+        // let plugin = plugins
+        //     .get(plug_id)
+        //     .ok_or_else(|| format!("Cannot find plugin: `{plug_id}`"))?;
 
-        if !plugin.read().variables.iter().any(|v| v.id == i) {
-            return Err(format!(
-                "Plugin `{plug_id}` does not provide variable `{i}`"
-            ));
-        }
+        // if !plugin.read().variables.iter().any(|v| v.id == i) {
+        //     return Err(format!(
+        //         "Plugin `{plug_id}` does not provide variable `{i}`"
+        //     ));
+        // }
 
-        let id_ = i.to_string();
+        // let id_ = i.to_string();
 
-        match timeout(
-            || plugin.read().get_variable(id_),
-            PLUGIN_GET_VARIABLE_TIMEOUT,
-        ) {
-            Ok(Ok(s)) => Ok(s),
-            Ok(Err(e)) => Err(e),
-            Err(TimeoutError()) => Err(String::from("Timeout")),
-        }
+        // match timeout(
+        //     || plugin.read().get_variable(id_),
+        //     PLUGIN_GET_VARIABLE_TIMEOUT,
+        // ) {
+        //     Ok(Ok(s)) => Ok(s),
+        //     Ok(Err(e)) => Err(e),
+        //     Err(TimeoutError()) => Err(String::from("Timeout")),
+        // }
+
+        self.variable_cache
+            .read()
+            .get(id.as_ref())
+            .map(ToOwned::to_owned)
+            .ok_or_else(|| String::from("Not Found"))
     }
 
     pub fn render_variable(&self, id: impl AsRef<str>) -> String {

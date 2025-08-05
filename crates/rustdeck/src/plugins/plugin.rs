@@ -224,23 +224,23 @@ impl Plugin {
     ///
     /// # Errors
     /// Returns error description provided by plugin binary.
-    pub fn run_action(&self, act_id: String, args: &[String]) -> Result<(), ActionError> {
+    pub fn run_action(&self, act_id: impl AsRef<str>, args: &[String]) -> Result<(), ActionError> {
         let state = self.try_get_state()?;
 
-        let Some(action_prototype) = self.actions.iter().find(|v| v.id == act_id) else {
+        let Some(action_prototype) = self.actions.iter().find(|v| v.id == act_id.as_ref()) else {
             return Err(ActionError::ActionNotFound {
                 plugin: self.id.clone(),
-                action: act_id,
+                action: act_id.as_ref().to_string(),
             });
         };
 
         let safe_args = Self::parse_args(&action_prototype.args, args)
-            .map_err(|_| ActionError::InvalidArgs(act_id.clone()))?;
+            .map_err(|_| ActionError::InvalidArgs(act_id.as_ref().to_string()))?;
 
         unsafe {
             let res = (self.inner.fn_run_action)(
                 state,
-                CString::new(act_id).unwrap().as_ptr().cast::<c_char>(),
+                CString::new(act_id.as_ref()).unwrap().as_ptr().cast::<c_char>(),
                 safe_args
                     .iter()
                     .map(super::safe_arg::SafeArg::as_arg)
@@ -268,10 +268,7 @@ impl Plugin {
     ///
     /// # Errors
     /// Returns error description provided by plugin binary.
-    pub fn get_variable<T>(&self, id: T) -> Result<String, String>
-    where
-        T: AsRef<str>,
-    {
+    pub fn get_variable(&self, id: impl AsRef<str>) -> Result<String, String> {
         let state = self.try_get_state().map_err(|e| e.to_string())?;
 
         unsafe {
@@ -344,10 +341,7 @@ impl Plugin {
     ///
     /// # Errors
     /// Returns error description provided by plugin binary.
-    pub fn get_enum_arg<T>(&self, id: T) -> Result<Vec<String>, String>
-    where
-        T: AsRef<str>,
-    {
+    pub fn get_enum_arg(&self, id: impl AsRef<str>) -> Result<Vec<String>, String> {
         let state = self.try_get_state().map_err(|e| e.to_string())?;
 
         unsafe {
@@ -380,10 +374,7 @@ impl Plugin {
     ///
     /// # Errors
     /// Returns error description provided by plugin binary.
-    pub fn get_config_value<T>(&mut self, id: T) -> Result<String, String>
-    where
-        T: AsRef<str>,
-    {
+    pub fn get_config_value(&mut self, id: impl AsRef<str>) -> Result<String, String> {
         let state = self.try_get_state().map_err(|e| e.to_string())?;
 
         unsafe {
@@ -416,10 +407,7 @@ impl Plugin {
     ///
     /// # Errors
     /// Returns error description provided by plugin binary.
-    pub fn set_config_value<T>(&mut self, id: T, value: String) -> Result<(), String>
-    where
-        T: AsRef<str>,
-    {
+    pub fn set_config_value(&mut self, id: impl AsRef<str>, value: String) -> Result<(), String> {
         let state = self.try_get_state().map_err(|e| e.to_string())?;
 
         let arg = SafeArg::String(Arg {
@@ -535,15 +523,15 @@ mod tests {
 
         assert_eq!(plugin.get_variable("counter").unwrap(), "0");
 
-        assert!(plugin.run_action("increment".into(), &[]).is_ok());
+        assert!(plugin.run_action("increment", &[]).is_ok());
         assert_eq!(plugin.get_variable("counter").unwrap(), "1");
 
-        assert!(plugin.run_action("add".into(), &["10".into()]).is_ok());
+        assert!(plugin.run_action("add", &["10".into()]).is_ok());
         assert_eq!(plugin.get_variable("counter").unwrap(), "11");
 
         assert!(
             plugin
-                .run_action("print".into(), &["Hello!".into()])
+                .run_action("print", &["Hello!".into()])
                 .is_ok()
         );
     }
