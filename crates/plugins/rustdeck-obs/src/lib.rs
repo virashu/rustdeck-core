@@ -290,7 +290,7 @@ fn get_config_value(state: &PluginState, id: &str) -> Result<String, String> {
         "host" => state.config.host.clone(),
         "port" => state.config.port.to_string(),
         "password" => state.config.password.clone().unwrap_or_default(),
-        "connect_timeout" => state.config.connect_timeout.as_secs().to_string(),
+        "connect_timeout" => state.config.connect_timeout.as_millis().to_string(),
         _ => unreachable!(),
     })
 }
@@ -304,7 +304,7 @@ fn set_config_value(state: &mut PluginState, id: &str, value: &Args) -> Result<(
         "password" => state.config.password = Some(value.get(0).string().to_owned()),
         "connect_timeout" => {
             state.config.connect_timeout =
-                Duration::from_secs(value.get(0).int().try_into().unwrap());
+                Duration::from_millis(value.get(0).int().try_into().unwrap());
         }
         _ => unreachable!(),
     }
@@ -324,7 +324,7 @@ export_plugin! {
         .config_option(ConfigOption::new("host", "Host", "The host of the OBS websocket", Type::String))
         .config_option(ConfigOption::new("port", "Port", "The port of the OBS websocket", Type::Int))
         .config_option(ConfigOption::new("password", "Password", "Websocket password", Type::String))
-        .config_option(ConfigOption::new("connect_timeout", "Connect timeout", "", Type::Int))
+        .config_option(ConfigOption::new("connect_timeout", "Connect timeout", "Milliseconds", Type::Int))
         .variable(Variable::new("scene", "Scene", Type::String))
         .variable(Variable::new("profile", "Profile", Type::String))
         .variable(Variable::new("is_streaming", "Is Streaming", Type::Bool))
