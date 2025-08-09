@@ -16,13 +16,18 @@ const fn init() -> Result<(), Box<dyn std::error::Error>> {
 
 const fn update(_: &()) {}
 
-fn run_action(_: &(), id: &str, _: &Args) -> Result<(), Box<dyn std::error::Error>> {
+fn run_action(_: &(), id: &str, args: &Args) -> Result<(), Box<dyn std::error::Error>> {
     match id {
         "shutdown" => {
             shutdown()?;
         }
         "reboot" => {
             reboot()?;
+        }
+        "execute" => {
+            let line = args.get(0).string().to_string();
+            let (exec, args) = line.split_once(' ').ok_or("Format error")?;
+            std::process::Command::new(exec).args(args.split(' '));
         }
         _ => unreachable!(),
     }
@@ -68,6 +73,10 @@ export_plugin! {
         .variable(Variable::new("time_minutes", "System time (mm)", Type::String))
         .action(Action::new("shutdown", "Shutdown", "Shutdown the system"))
         .action(Action::new("reboot", "Reboot", "Reboot the system"))
+        .action(
+            Action::new("execute", "Execute", "Execute a command")
+                .arg("command", "Command", "Command to run", Type::String)
+        )
         .build()
         .unwrap()
 }
