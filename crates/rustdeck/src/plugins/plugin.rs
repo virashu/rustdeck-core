@@ -240,7 +240,10 @@ impl Plugin {
         unsafe {
             let res = (self.inner.fn_run_action)(
                 state,
-                CString::new(act_id.as_ref()).unwrap().as_ptr().cast::<c_char>(),
+                CString::new(act_id.as_ref())
+                    .unwrap()
+                    .as_ptr()
+                    .cast::<c_char>(),
                 safe_args
                     .iter()
                     .map(super::safe_arg::SafeArg::as_arg)
@@ -294,6 +297,33 @@ impl Plugin {
         }
     }
 
+    fn package_arg(
+        value: String,
+        r#type: &PluginDataType,
+    ) -> Result<SafeArg, Box<dyn std::error::Error>> {
+        Ok(match r#type {
+            PluginDataType::Bool => SafeArg::Bool(Arg {
+                b: Box::into_raw(Box::new(value.parse::<bool>()?)),
+            }),
+            PluginDataType::Int => SafeArg::Int(Arg {
+                i: Box::into_raw(Box::new(value.parse::<i32>()?)),
+            }),
+            PluginDataType::Float => SafeArg::Float(Arg {
+                f: Box::into_raw(Box::new(value.parse::<f32>()?)),
+            }),
+            PluginDataType::String => SafeArg::String(Arg {
+                c: ManuallyDrop::new(CString::new(value)?)
+                    .as_ptr()
+                    .cast::<c_char>(),
+            }),
+            PluginDataType::Enum => SafeArg::String(Arg {
+                c: ManuallyDrop::new(CString::new(value)?)
+                    .as_ptr()
+                    .cast::<c_char>(),
+            }),
+        })
+    }
+
     /// # Errors
     /// Returns error if parsing fails
     pub fn parse_args(
@@ -307,27 +337,29 @@ impl Plugin {
         let mut parsed = Vec::with_capacity(proto.len());
 
         for (pr, arg_str) in proto.iter().zip(args) {
-            let arg = match pr.r#type {
-                PluginDataType::Bool => SafeArg::Bool(Arg {
-                    b: Box::into_raw(Box::new(arg_str.parse::<bool>()?)),
-                }),
-                PluginDataType::Int => SafeArg::Int(Arg {
-                    i: Box::into_raw(Box::new(arg_str.parse::<i32>()?)),
-                }),
-                PluginDataType::Float => SafeArg::Float(Arg {
-                    f: Box::into_raw(Box::new(arg_str.parse::<f32>()?)),
-                }),
-                PluginDataType::String => SafeArg::String(Arg {
-                    c: ManuallyDrop::new(CString::new(arg_str.clone())?)
-                        .as_ptr()
-                        .cast::<c_char>(),
-                }),
-                PluginDataType::Enum => SafeArg::String(Arg {
-                    c: ManuallyDrop::new(CString::new(arg_str.clone())?)
-                        .as_ptr()
-                        .cast::<c_char>(),
-                }),
-            };
+            let arg = Self::package_arg(arg_str.clone(), &pr.r#type)?;
+
+            // match pr.r#type {
+            //     PluginDataType::Bool => SafeArg::Bool(Arg {
+            //         b: Box::into_raw(Box::new(arg_str.parse::<bool>()?)),
+            //     }),
+            //     PluginDataType::Int => SafeArg::Int(Arg {
+            //         i: Box::into_raw(Box::new(arg_str.parse::<i32>()?)),
+            //     }),
+            //     PluginDataType::Float => SafeArg::Float(Arg {
+            //         f: Box::into_raw(Box::new(arg_str.parse::<f32>()?)),
+            //     }),
+            //     PluginDataType::String => SafeArg::String(Arg {
+            //         c: ManuallyDrop::new(CString::new(arg_str.clone())?)
+            //             .as_ptr()
+            //             .cast::<c_char>(),
+            //     }),
+            //     PluginDataType::Enum => SafeArg::String(Arg {
+            //         c: ManuallyDrop::new(CString::new(arg_str.clone())?)
+            //             .as_ptr()
+            //             .cast::<c_char>(),
+            //     }),
+            // };
             parsed.push(arg);
         }
 
@@ -410,11 +442,19 @@ impl Plugin {
     pub fn set_config_value(&mut self, id: impl AsRef<str>, value: String) -> Result<(), String> {
         let state = self.try_get_state().map_err(|e| e.to_string())?;
 
-        let arg = SafeArg::String(Arg {
-            c: ManuallyDrop::new(CString::new(value).unwrap())
-                .as_ptr()
-                .cast::<c_char>(),
-        });
+        let opt = self
+            .config_options
+            .iter()
+            .find(|opt| opt.id == id.as_ref())
+            .unwrap();
+
+        let arg = Self::package_arg(value, &opt.r#type).unwrap();
+
+        // let arg = SafeArg::String(Arg {
+        //     c: ManuallyDrop::new(CString::new(value).unwrap())
+        //         .as_ptr()
+        //         .cast::<c_char>(),
+        // });
         unsafe {
             let res = (self.inner.fn_set_config_value.as_ref().unwrap())(
                 state,
@@ -529,10 +569,6 @@ mod tests {
         assert!(plugin.run_action("add", &["10".into()]).is_ok());
         assert_eq!(plugin.get_variable("counter").unwrap(), "11");
 
-        assert!(
-            plugin
-                .run_action("print", &["Hello!".into()])
-                .is_ok()
-        );
+        assert!(plugin.run_action("print", &["Hello!".into()]).is_ok());
     }
 }

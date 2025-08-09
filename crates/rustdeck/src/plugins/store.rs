@@ -12,12 +12,7 @@ use crate::{
     },
 };
 
-use super::{
-    Plugin,
-    error::ActionError,
-    load_plugins_at,
-    util::{TimeoutError, timeout},
-};
+use super::{Plugin, error::ActionError, load_plugins_at, util::timeout};
 
 pub struct PluginStore {
     plugins: RwLock<HashMap<String, RwLock<Plugin>>>,
@@ -56,7 +51,7 @@ impl PluginStore {
                 match timeout(|| p.write().init(), PLUGIN_INIT_TIMEOUT) {
                     Ok(Ok(())) => tracing::info!("Initialized plugin {id:?}"),
                     Ok(Err(e)) => tracing::warn!("Failed to initialize plugin {id:?}: {e}"),
-                    Err(TimeoutError()) => {
+                    Err(_) => {
                         tracing::warn!("Plugin {id:?} took to long to initialize.");
                     }
                 }
@@ -78,8 +73,12 @@ impl PluginStore {
                         tracing::warn!("A error occurred while updating plugin {id:?}: {e}",);
                         None
                     }
-                    Err(TimeoutError()) => {
-                        tracing::warn!("Plugin {id:?} took to long to update.");
+                    Err(timeout_e) => {
+                        tracing::warn!(
+                            "Plugin {id:?} took too long to update. ({:?} > {:?})",
+                            timeout_e.actual,
+                            timeout_e.timeout
+                        );
                         None
                     }
                 },
@@ -91,7 +90,22 @@ impl PluginStore {
                     .map(|var| {
                         (
                             format!("{}.{}", lock.id, var.id),
-                            lock.get_variable(&var.id).unwrap(),
+                            match timeout(
+                                || lock.get_variable(&var.id),
+                                PLUGIN_GET_VARIABLE_TIMEOUT,
+                            ) {
+                                Ok(Ok(s)) => s,
+                                Ok(Err(e)) => e,
+                                Err(timeout_e) => {
+                                    tracing::warn!(
+                                        "Timeout while trying to get variable {:?}. ({:?} > {:?})",
+                                        var.id,
+                                        timeout_e.actual,
+                                        timeout_e.timeout
+                                    );
+                                    String::from("Timeout")
+                                }
+                            },
                         )
                     })
                     .collect::<HashMap<String, String>>()

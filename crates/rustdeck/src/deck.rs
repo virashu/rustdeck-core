@@ -115,7 +115,15 @@ impl Deck {
 
         loop {
             if inst.elapsed() > update_interval {
+                let upd = Instant::now();
                 self.plugin_store.update_all();
+                if upd.elapsed() > update_interval {
+                    tracing::warn!(
+                        "Update took longer then update interval: {:?} > {:?}",
+                        upd.elapsed(),
+                        update_interval
+                    );
+                }
 
                 inst = Instant::now();
             }

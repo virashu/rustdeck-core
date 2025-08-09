@@ -10,5 +10,5 @@ pub const DECK_ACTION_NAME: &str = "Deck";
 pub const DECK_PLUGIN_EXT: &str = ".deckplugin";
 
 pub const PLUGIN_INIT_TIMEOUT: Duration = Duration::from_secs(10);
-pub const PLUGIN_UPDATE_TIMEOUT: Duration = Duration::from_secs(10);
-pub const PLUGIN_GET_VARIABLE_TIMEOUT: Duration = Duration::from_secs(10);
+pub const PLUGIN_UPDATE_TIMEOUT: Duration = Duration::from_millis(100);
+pub const PLUGIN_GET_VARIABLE_TIMEOUT: Duration = Duration::from_millis(100);
