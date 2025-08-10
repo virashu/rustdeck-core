@@ -117,6 +117,8 @@ impl PluginStore {
         *self.variable_cache.write() = vars;
     }
 
+    /// # Errors
+    /// Returns error if `id` is incorrect, or error occurred in plugin
     pub fn try_resolve_variable(&self, id: impl AsRef<str>) -> Result<String, String> {
         // let (plug_id, i) = id.as_ref().split_once('.').ok_or("Wrong variable format")?;
         // let plugins = self.plugins.read();
@@ -173,7 +175,7 @@ impl PluginStore {
                 .get(plug_id)
                 .ok_or_else(|| ActionError::PluginNotFound(plug_id.into()))?
                 .read()
-                .run_action(act_id.to_string(), &act.args)?;
+                .run_action(act_id, &act.args)?;
         }
 
         Ok(())
@@ -296,6 +298,8 @@ impl PluginStore {
             .collect()
     }
 
+    /// # Errors
+    /// Returns error if `id` is incorrect, or error occurred in plugin
     pub fn get_enum_arg_variants(&self, id: impl AsRef<str>) -> Result<Vec<String>, String> {
         let id = id.as_ref();
 
@@ -367,7 +371,18 @@ impl PluginStore {
                     .collect::<Vec<String>>();
                 let opts = opts_ids
                     .iter()
-                    .map(|opt_id| (opt_id.clone(), lock.get_config_value(opt_id).unwrap()))
+                    .filter_map(|opt_id| {
+                        lock.get_config_value(opt_id)
+                            .inspect_err(|e| {
+                                tracing::warn!(
+                                    "Failed to get config option {:?} of plugin {:?}: {}",
+                                    opt_id,
+                                    lock.id,
+                                    e
+                                );
+                            })
+                            .map_or(None, |opt| Some((opt, opt_id.clone())))
+                    })
                     .collect();
 
                 (lock.id.clone(), opts)
@@ -375,6 +390,8 @@ impl PluginStore {
             .collect()
     }
 
+    /// # Errors
+    /// Returns error if `id` is incorrect, or error occurred in plugin
     pub fn set_config(&self, id: impl AsRef<str>, value: impl AsRef<str>) -> Result<(), String> {
         let (plug_id, i) = id
             .as_ref()
