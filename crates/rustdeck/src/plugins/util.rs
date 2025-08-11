@@ -3,7 +3,7 @@ use std::{
     time::{Duration, Instant},
 };
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Clone)]
 #[error("Action timed out")]
 pub struct TimeoutError {
     pub timeout: Duration,

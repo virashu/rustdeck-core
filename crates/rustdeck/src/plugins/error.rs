@@ -1,5 +1,7 @@
 use rustdeck_common::util::PtrToStrError;
 
+use crate::plugins::util::TimeoutError;
+
 #[derive(thiserror::Error, Debug)]
 pub enum PluginLoadError {
     /// Error loading (not a .dll/.so)
@@ -51,22 +53,22 @@ impl From<libloading::Error> for PluginLoadError {
     }
 }
 
-#[derive(thiserror::Error, Debug)]
+#[derive(thiserror::Error, Debug, Clone)]
 #[error("Plugin is not initialized")]
 pub struct InitError();
 
 #[derive(thiserror::Error, Debug)]
 pub enum ActionError {
-    #[error("Wrong action format: '{0}'")]
+    #[error("Wrong action format: {0:?}")]
     InvalidFormat(String),
 
-    #[error("Plugin `{0}` was not found")]
+    #[error("Plugin {0:?} was not found")]
     PluginNotFound(String),
 
-    #[error("Action `{action}` was not found for plugin `{plugin}`")]
+    #[error("Action {action:?} was not found for plugin {plugin:?}")]
     ActionNotFound { action: String, plugin: String },
 
-    #[error("Arguments for action `{0}` did not pass validation")]
+    #[error("Arguments for action {0:?} did not pass validation")]
     InvalidArgs(String),
 
     #[error("Plugin returned an error: {0}")]
@@ -74,4 +76,28 @@ pub enum ActionError {
 
     #[error(transparent)]
     InitError(#[from] InitError),
+
+    #[error(transparent)]
+    TimeoutError(#[from] TimeoutError),
+}
+
+#[derive(thiserror::Error, Debug, Clone)]
+pub enum VariableError {
+    #[error("Wrong variable format: {0:?}")]
+    InvalidFormat(String),
+
+    #[error("Plugin {0:?} was not found")]
+    PluginNotFound(String),
+
+    #[error("Variable {variable:?} was not found for plugin {plugin:?}")]
+    VariableNotFound { variable: String, plugin: String },
+
+    #[error("Plugin returned an error: {0}")]
+    PluginError(String),
+
+    #[error(transparent)]
+    InitError(#[from] InitError),
+
+    #[error(transparent)]
+    TimeoutError(#[from] TimeoutError),
 }

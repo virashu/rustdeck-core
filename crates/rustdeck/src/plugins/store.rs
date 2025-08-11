@@ -13,11 +13,16 @@ use crate::{
     },
 };
 
-use super::{Plugin, error::ActionError, load_plugins_at, util::timeout};
+use super::{
+    Plugin,
+    error::{ActionError, VariableError},
+    load_plugins_at,
+    util::timeout,
+};
 
 pub struct PluginStore {
     plugins: RwLock<IndexMap<String, RwLock<Plugin>>>,
-    variable_cache: RwLock<HashMap<String, String>>,
+    variable_cache: RwLock<HashMap<String, Result<String, VariableError>>>,
 }
 
 impl PluginStore {
@@ -95,8 +100,7 @@ impl PluginStore {
                                 || lock.get_variable(&var.id),
                                 PLUGIN_GET_VARIABLE_TIMEOUT,
                             ) {
-                                Ok(Ok(s)) => s,
-                                Ok(Err(e)) => e,
+                                Ok(res) => res,
                                 Err(timeout_e) => {
                                     tracing::warn!(
                                         "Timeout while trying to get variable {:?}. ({:?} > {:?})",
@@ -104,38 +108,40 @@ impl PluginStore {
                                         timeout_e.actual,
                                         timeout_e.timeout
                                     );
-                                    String::from("Timeout")
+                                    Err(VariableError::TimeoutError(timeout_e))
                                 }
                             },
                         )
                     })
-                    .collect::<HashMap<String, String>>()
+                    .collect::<HashMap<String, Result<String, VariableError>>>()
             })
             .flatten()
-            .collect::<HashMap<String, String>>();
+            .collect::<HashMap<String, Result<String, VariableError>>>();
 
         *self.variable_cache.write() = vars;
     }
 
     /// # Errors
     /// Returns error if `id` is incorrect, or error occurred in plugin
-    pub fn try_resolve_variable(&self, id: impl AsRef<str>) -> Result<String, String> {
-        // let (plug_id, i) = id.as_ref().split_once('.').ok_or("Wrong variable format")?;
-        // let plugins = self.plugins.read();
-        // let plugin = plugins
-        //     .get(plug_id)
-        //     .ok_or_else(|| format!("Cannot find plugin: `{plug_id}`"))?;
+    pub fn try_resolve_variable(&self, id: impl AsRef<str>) -> Result<String, VariableError> {
+        let (plug_id, i) = id
+            .as_ref()
+            .split_once('.')
+            .ok_or_else(|| VariableError::InvalidFormat(id.as_ref().to_owned()))?;
+        let plugins = self.plugins.read();
+        let plugin = plugins
+            .get(plug_id)
+            .ok_or_else(|| VariableError::PluginNotFound(plug_id.to_owned()))?;
 
-        // if !plugin.read().variables.iter().any(|v| v.id == i) {
-        //     return Err(format!(
-        //         "Plugin `{plug_id}` does not provide variable `{i}`"
-        //     ));
-        // }
-
-        // let id_ = i.to_string();
+        if !plugin.read().variables.iter().any(|v| v.id == i) {
+            return Err(VariableError::VariableNotFound {
+                variable: i.to_owned(),
+                plugin: plug_id.to_owned(),
+            });
+        }
 
         // match timeout(
-        //     || plugin.read().get_variable(id_),
+        //     || plugin.read().get_variable(i),
         //     PLUGIN_GET_VARIABLE_TIMEOUT,
         // ) {
         //     Ok(Ok(s)) => Ok(s),
@@ -143,16 +149,14 @@ impl PluginStore {
         //     Err(TimeoutError()) => Err(String::from("Timeout")),
         // }
 
-        self.variable_cache
-            .read()
-            .get(id.as_ref())
-            .map(ToOwned::to_owned)
-            .ok_or_else(|| String::from("Not Found"))
+        #[allow(clippy::missing_panics_doc, reason = "checked")]
+        self.variable_cache.read().get(id.as_ref()).unwrap().clone()
     }
 
     pub fn render_variable(&self, id: impl AsRef<str>) -> String {
         match self.try_resolve_variable(id) {
-            Err(s) | Ok(s) => s,
+            Ok(s) => s,
+            Err(e) => format!("<{e}>"),
         }
     }
 

@@ -18,7 +18,7 @@ use super::{
 use crate::{
     constants::DECK_ACTION_ID,
     plugins::{
-        error::{ActionError, InitError},
+        error::{ActionError, InitError, VariableError},
         safe_arg::SafeArg,
     },
 };
@@ -254,7 +254,11 @@ impl Plugin {
             if res.status != 0 {
                 let error_value = util::try_ptr_to_str(res.content.cast()).map_or_else(
                     |_| String::from("<no error description>"),
-                    ToOwned::to_owned,
+                    |error| {
+                        let error = error.to_owned();
+                        self.free(res.content.cast());
+                        error
+                    },
                 );
 
                 return Err(ActionError::PluginError(error_value));
@@ -271,8 +275,8 @@ impl Plugin {
     ///
     /// # Errors
     /// Returns error description provided by plugin binary.
-    pub fn get_variable(&self, id: impl AsRef<str>) -> Result<String, String> {
-        let state = self.try_get_state().map_err(|e| e.to_string())?;
+    pub fn get_variable(&self, id: impl AsRef<str>) -> Result<String, VariableError> {
+        let state = self.try_get_state()?;
 
         unsafe {
             let res = (self.inner.fn_get_variable)(
@@ -285,14 +289,16 @@ impl Plugin {
                 self.free(res.content.cast());
                 Ok(value)
             } else {
-                try_ptr_to_str(res.content.cast()).map_or_else(
-                    |_| Err(String::from("<no error description>")),
+                let error_value = try_ptr_to_str(res.content.cast()).map_or_else(
+                    |_| String::from("<no error description>"),
                     |error| {
                         let error = error.to_owned();
                         self.free(res.content.cast());
-                        Err(error)
+                        error
                     },
-                )
+                );
+
+                Err(VariableError::PluginError(error_value))
             }
         }
     }
