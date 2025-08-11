@@ -11,15 +11,64 @@ use parking_lot::RwLock;
 use crate::{
     buttons::{DeckButtonUpdate, RawDeckButton, RawDeckButtonAction, VariableRenderer},
     config::{DeckButtonScreen, DeckConfig, DeckDimensionConfig},
-    constants::{DECK_ACTION_ID, DECK_ACTION_NAME, DECK_ACTION_PREFIX},
+    constants::DECK_ACTION_PREFIX,
     icon_store::{IconStore, IconStoreGetError},
     models::{
-        PluginAction, PluginActionArgsData, PluginActionGroup, PluginConfigOption,
-        PluginConfigOptionGroup, PluginData, PluginVariable, PluginVariableGroup,
-        RenderedDeckScreen,
+        PluginAction, PluginActionGroup, PluginConfigOption, PluginConfigOptionGroup, PluginData,
+        PluginVariable, PluginVariableGroup, RenderedDeckScreen,
     },
-    plugins::{PluginDataType, PluginStore},
+    plugins::PluginStore,
 };
+
+mod deck_pluginlike_properties {
+    use crate::{
+        constants::{DECK_ACTION_ID, DECK_ACTION_NAME},
+        models::{
+            PluginAction, PluginActionArgsData, PluginActionGroup, PluginConfigOption,
+            PluginConfigOptionGroup,
+        },
+        plugins::PluginDataType,
+    };
+
+    pub fn actions() -> PluginActionGroup {
+        PluginActionGroup {
+            id: String::from(DECK_ACTION_ID),
+            name: String::from(DECK_ACTION_NAME),
+            actions: vec![PluginAction {
+                id: String::from("deck.switch_screen"),
+                name: String::from("Switch screen"),
+                description: String::new(),
+                args: vec![PluginActionArgsData {
+                    id: String::from("deck.switch_screen.destination"),
+                    name: String::from("To "),
+                    description: String::from("Screen to switch to"),
+                    r#type: PluginDataType::Enum,
+                }],
+            }],
+        }
+    }
+
+    pub fn config_options() -> PluginConfigOptionGroup {
+        PluginConfigOptionGroup {
+            id: String::from(DECK_ACTION_ID),
+            name: String::from(DECK_ACTION_NAME),
+            config_options: vec![
+                PluginConfigOption {
+                    id: String::from("deck.dimensions_cols"),
+                    name: String::from("Columns"),
+                    description: String::from("Amount of deck button columns"),
+                    r#type: PluginDataType::Int,
+                },
+                PluginConfigOption {
+                    id: String::from("deck.dimensions_rows"),
+                    name: String::from("Rows"),
+                    description: String::from("Amount of deck button rows"),
+                    r#type: PluginDataType::Int,
+                },
+            ],
+        }
+    }
+}
 
 #[derive(thiserror::Error, Debug)]
 #[error("Screen with name {0:?} already exists")]
@@ -67,42 +116,11 @@ impl Deck {
             config: RwLock::new(config.deck),
             config_callback: Arc::new(config_callback),
             current_screen_id: RwLock::new(String::from("default")),
-            screens: RwLock::new(config.screens.into_iter().collect()),
+            screens: RwLock::new(config.screens),
             plugin_store,
             icon_store,
-            actions: PluginActionGroup {
-                id: String::from(DECK_ACTION_ID),
-                name: String::from(DECK_ACTION_NAME),
-                actions: vec![PluginAction {
-                    id: String::from("deck.switch_screen"),
-                    name: String::from("Switch screen"),
-                    description: String::new(),
-                    args: vec![PluginActionArgsData {
-                        id: String::from("deck.switch_screen.destination"),
-                        name: String::from("To "),
-                        description: String::from("Screen to switch to"),
-                        r#type: PluginDataType::Enum,
-                    }],
-                }],
-            },
-            config_options: PluginConfigOptionGroup {
-                id: String::from(DECK_ACTION_ID),
-                name: String::from(DECK_ACTION_NAME),
-                config_options: vec![
-                    PluginConfigOption {
-                        id: String::from("deck.dimensions_cols"),
-                        name: String::from("Columns"),
-                        description: String::from("Amount of deck button columns"),
-                        r#type: PluginDataType::Int,
-                    },
-                    PluginConfigOption {
-                        id: String::from("deck.dimensions_rows"),
-                        name: String::from("Rows"),
-                        description: String::from("Amount of deck button rows"),
-                        r#type: PluginDataType::Int,
-                    },
-                ],
-            },
+            actions: deck_pluginlike_properties::actions(),
+            config_options: deck_pluginlike_properties::config_options(),
         })
     }
 
