@@ -13,7 +13,7 @@ indexmap = { version = "2.9.0", default-features = false, features = [
   "serde",
   "rayon",
 ] }
-libloading = { version = "0.8.5", default-features = false }
+libloading = { version = "0.9.0", default-features = false, features = ["std"] }
 parking_lot = { version = "0.12.4", default-features = false, features = [
   "deadlock_detection",
 ] }

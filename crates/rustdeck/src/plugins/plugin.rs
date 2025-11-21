@@ -1,6 +1,5 @@
 use std::{
-    ffi::{CString, OsStr, c_char, c_void},
-    fmt::Debug,
+    ffi::{CString, c_char, c_void},
     mem::ManuallyDrop,
 };
 
@@ -50,7 +49,7 @@ impl Plugin {
     /// Check [`PluginLoadError`]
     pub fn try_load<P>(path: P) -> Result<Self, PluginLoadError>
     where
-        P: AsRef<OsStr> + Debug,
+        P: libloading::AsFilename,
     {
         unsafe {
             let lib = Library::new(path)?;
