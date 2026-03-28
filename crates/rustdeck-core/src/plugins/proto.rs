@@ -6,9 +6,7 @@ use rustdeck_common::{
     util,
 };
 
-use crate::plugins::error::PluginLoadError;
-
-use super::datatype::PluginDataType;
+use super::{datatype::PluginDataType, error::PluginLoadError};
 
 /// Args are positional
 #[derive(Clone)]

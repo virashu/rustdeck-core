@@ -5,6 +5,7 @@ use std::{
 
 use libloading::Library;
 use rustdeck_common::{
+    Result as FFIResult,
     proto::{Arg, BuildFn, FreeStringFn, Plugin as FFIPlugin},
     util::{self, try_ptr_to_str},
 };
@@ -12,15 +13,11 @@ use rustdeck_common::{
 use super::{
     datatype::PluginDataType,
     error::PluginLoadError,
+    error::{ActionError, InitError, VariableError},
     proto::{Action, ActionArg, ConfigOption, Variable},
+    safe_arg::SafeArg,
 };
-use crate::{
-    constants::DECK_ACTION_ID,
-    plugins::{
-        error::{ActionError, InitError, VariableError},
-        safe_arg::SafeArg,
-    },
-};
+use crate::constants::DECK_ACTION_ID;
 
 /// Wrapper to isolate all the unsafe operations
 ///
@@ -150,14 +147,7 @@ impl Plugin {
             let state = if state_res.status == 0 {
                 state_res.content
             } else {
-                return Err(try_ptr_to_str(state_res.content.cast()).map_or_else(
-                    |_| String::new(),
-                    |error| {
-                        let error = error.to_owned();
-                        self.free(state_res.content.cast());
-                        error
-                    },
-                ));
+                return Err(self.get_result_error_message(state_res));
             };
 
             self.state = Some(state);
@@ -188,14 +178,7 @@ impl Plugin {
             if res.status == 0 {
                 Ok(())
             } else {
-                try_ptr_to_str(res.content.cast()).map_or_else(
-                    |_| Err(String::from("<no error description>")),
-                    |error| {
-                        let error = error.to_owned();
-                        self.free(res.content.cast());
-                        Err(error)
-                    },
-                )
+                Err(self.get_result_error_message(res))
             }
         }
     }
@@ -209,6 +192,20 @@ impl Plugin {
             let free: libloading::Symbol<FreeStringFn> =
                 self.lib.as_ref().unwrap().get(b"free").unwrap();
             free(ptr);
+        }
+    }
+
+    #[allow(clippy::needless_pass_by_value, reason = "Pointer is freed")]
+    fn get_result_error_message(&self, res: FFIResult) -> String {
+        unsafe {
+            try_ptr_to_str(res.content.cast()).map_or_else(
+                |_| String::from("<no error description>"),
+                |error| {
+                    let error = error.to_owned();
+                    self.free(res.content.cast());
+                    error
+                },
+            )
         }
     }
 
@@ -251,14 +248,7 @@ impl Plugin {
             );
 
             if res.status != 0 {
-                let error_value = util::try_ptr_to_str(res.content.cast()).map_or_else(
-                    |_| String::from("<no error description>"),
-                    |error| {
-                        let error = error.to_owned();
-                        self.free(res.content.cast());
-                        error
-                    },
-                );
+                let error_value = self.get_result_error_message(res);
 
                 return Err(ActionError::PluginError(error_value));
             }
@@ -288,20 +278,14 @@ impl Plugin {
                 self.free(res.content.cast());
                 Ok(value)
             } else {
-                let error_value = try_ptr_to_str(res.content.cast()).map_or_else(
-                    |_| String::from("<no error description>"),
-                    |error| {
-                        let error = error.to_owned();
-                        self.free(res.content.cast());
-                        error
-                    },
-                );
+                let error_value = self.get_result_error_message(res);
 
                 Err(VariableError::PluginError(error_value))
             }
         }
     }
 
+    #[allow(clippy::match_same_arms, reason = "Match body may change in future")]
     fn package_arg(
         value: String,
         r#type: &PluginDataType,
@@ -344,27 +328,6 @@ impl Plugin {
         for (pr, arg_str) in proto.iter().zip(args) {
             let arg = Self::package_arg(arg_str.clone(), &pr.r#type)?;
 
-            // match pr.r#type {
-            //     PluginDataType::Bool => SafeArg::Bool(Arg {
-            //         b: Box::into_raw(Box::new(arg_str.parse::<bool>()?)),
-            //     }),
-            //     PluginDataType::Int => SafeArg::Int(Arg {
-            //         i: Box::into_raw(Box::new(arg_str.parse::<i32>()?)),
-            //     }),
-            //     PluginDataType::Float => SafeArg::Float(Arg {
-            //         f: Box::into_raw(Box::new(arg_str.parse::<f32>()?)),
-            //     }),
-            //     PluginDataType::String => SafeArg::String(Arg {
-            //         c: ManuallyDrop::new(CString::new(arg_str.clone())?)
-            //             .as_ptr()
-            //             .cast::<c_char>(),
-            //     }),
-            //     PluginDataType::Enum => SafeArg::String(Arg {
-            //         c: ManuallyDrop::new(CString::new(arg_str.clone())?)
-            //             .as_ptr()
-            //             .cast::<c_char>(),
-            //     }),
-            // };
             parsed.push(arg);
         }
 
@@ -392,14 +355,7 @@ impl Plugin {
                 self.free(res.content.cast());
                 Ok(value.split('\n').map(ToOwned::to_owned).collect())
             } else {
-                try_ptr_to_str(res.content.cast()).map_or_else(
-                    |_| Err(String::from("<no error description>")),
-                    |error| {
-                        let error = error.to_owned();
-                        self.free(res.content.cast());
-                        Err(error)
-                    },
-                )
+                Err(self.get_result_error_message(res))
             }
         }
     }
@@ -425,14 +381,7 @@ impl Plugin {
                 self.free(res.content.cast());
                 Ok(value.split('\n').map(ToOwned::to_owned).collect())
             } else {
-                try_ptr_to_str(res.content.cast()).map_or_else(
-                    |_| Err(String::from("<no error description>")),
-                    |error| {
-                        let error = error.to_owned();
-                        self.free(res.content.cast());
-                        Err(error)
-                    },
-                )
+                Err(self.get_result_error_message(res))
             }
         }
     }
@@ -470,14 +419,7 @@ impl Plugin {
             if res.status == 0 {
                 Ok(())
             } else {
-                try_ptr_to_str(res.content.cast()).map_or_else(
-                    |_| Err(String::from("<no error description>")),
-                    |error| {
-                        let error = error.to_owned();
-                        self.free(res.content.cast());
-                        Err(error)
-                    },
-                )
+                Err(self.get_result_error_message(res))
             }
         }
     }

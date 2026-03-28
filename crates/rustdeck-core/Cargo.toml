@@ -1,17 +1,19 @@
 [package]
-name = "rustdeck"
+name = "rustdeck-core"
 version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-base64 = { version = "0.22.1", optional = true, default-features = false, features = [
-  "std",
+rustdeck-common = { path = "../rustdeck-common" }
+
+base64 = { version = "0.22.1", default-features = false, features = [
   "alloc",
-] }
-indexmap = { version = "2.9.0", default-features = false, features = [
   "std",
-  "serde",
+], optional = true }
+indexmap = { version = "2.9.0", default-features = false, features = [
   "rayon",
+  "serde",
+  "std",
 ] }
 libloading = { version = "0.9.0", default-features = false, features = ["std"] }
 parking_lot = { version = "0.12.4", default-features = false, features = [
@@ -23,10 +25,9 @@ regex = { version = "1.11.1", default-features = false, features = [
   "std",
   "unicode",
 ] }
-rustdeck-common = { path = "../rustdeck-common" }
 serde = { version = "1.0.219", default-features = false, features = [
-  "std",
   "derive",
+  "std",
 ] }
 thiserror = { version = "2.0.12", default-features = false, features = ["std"] }
 tracing = { version = "0.1.41", default-features = false, features = ["std"] }

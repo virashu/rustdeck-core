@@ -4,6 +4,12 @@ use indexmap::IndexMap;
 use parking_lot::RwLock;
 use rayon::iter::{IntoParallelRefIterator, ParallelIterator};
 
+use super::{
+    Plugin,
+    error::{ActionError, VariableError},
+    load_plugins_at,
+    util::timeout,
+};
 use crate::{
     buttons::RawDeckButtonAction,
     constants::{PLUGIN_GET_VARIABLE_TIMEOUT, PLUGIN_INIT_TIMEOUT, PLUGIN_UPDATE_TIMEOUT},
@@ -11,13 +17,6 @@ use crate::{
         PluginAction, PluginActionArgsData, PluginActionGroup, PluginConfigOption,
         PluginConfigOptionGroup, PluginData, PluginVariable, PluginVariableGroup,
     },
-};
-
-use super::{
-    Plugin,
-    error::{ActionError, VariableError},
-    load_plugins_at,
-    util::timeout,
 };
 
 pub struct PluginStore {

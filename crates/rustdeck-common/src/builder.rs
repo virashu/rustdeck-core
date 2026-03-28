@@ -131,7 +131,7 @@ impl PluginBuilder {
     ///     .update(decorate_fn_update!(update))
     ///     .get_variable(decorate_fn_get_variable!(get_variable))
     ///     .run_action(decorate_fn_run_action!(run_action));
-    /// 
+    ///
     /// let plugin: *const Plugin = builder.build().unwrap();
     /// ```
     pub fn new(id: impl AsRef<str>, name: impl AsRef<str>, desc: impl AsRef<str>) -> Self {

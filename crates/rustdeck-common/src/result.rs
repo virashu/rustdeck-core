@@ -35,7 +35,7 @@ impl Result {
                 content: value.cast(),
             },
             Err(e) => Self {
-                status: 1,
+                status: status::ERROR,
                 content: util::str_to_ptr(e.to_string()).cast(),
             },
         }

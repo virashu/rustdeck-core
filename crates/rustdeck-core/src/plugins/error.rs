@@ -1,6 +1,6 @@
 use rustdeck_common::util::PtrToStrError;
 
-use crate::plugins::util::TimeoutError;
+use super::util::TimeoutError;
 
 #[derive(thiserror::Error, Debug)]
 pub enum PluginLoadError {
@@ -29,25 +29,27 @@ pub enum PluginLoadError {
     FormatError(String),
 }
 
-fn win_error_to_err_code(err: &str) -> Option<i32> {
-    err.split_once(',')
-        .and_then(|x| x.0.strip_prefix("Os { code: "))
-        .and_then(|x| x.parse().ok())
-}
-
 impl From<libloading::Error> for PluginLoadError {
     fn from(value: libloading::Error) -> Self {
+        // Needs transmute as libloading does not provide public access
+        // to `WindowsError`s error code
+        #[allow(
+            clippy::missing_transmute_annotations,
+            reason = "`libloading::WindowsError` type is private"
+        )]
         match value {
-            libloading::Error::LoadLibraryExW { ref source }
-                if win_error_to_err_code(&format!("{source:?}")) == Some(193) =>
+            libloading::Error::LoadLibraryExW { source }
+                if 193 == unsafe { std::mem::transmute::<_, i32>(source) } =>
             {
                 Self::NotALibrary(value)
             }
-            libloading::Error::GetProcAddress { ref source }
-                if win_error_to_err_code(&format!("{source:?}")) == Some(127) =>
+
+            libloading::Error::GetProcAddress { source }
+                if 127 == unsafe { std::mem::transmute::<_, i32>(source) } =>
             {
                 Self::SymbolError(value)
             }
+
             _ => Self::GenericLibError(value),
         }
     }
