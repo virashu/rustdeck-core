@@ -1639,7 +1639,11 @@ source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "56f7d92ca342cea22a06f2121d944b4fd82af56988c270852495420f961d4ace"
 
 [[package]]
-name = "rustdeck"
+name = "rustdeck-common"
+version = "0.1.0"
+
+[[package]]
+name = "rustdeck-core"
 version = "0.1.0"
 dependencies = [
  "base64",
@@ -1653,10 +1657,6 @@ dependencies = [
  "thiserror",
  "tracing",
 ]
-
-[[package]]
-name = "rustdeck-common"
-version = "0.1.0"
 
 [[package]]
 name = "rustdeck-media"
@@ -1680,7 +1680,7 @@ name = "rustdeck-server"
 version = "0.1.0"
 dependencies = [
  "axum",
- "rustdeck",
+ "rustdeck-core",
  "serde",
  "serde_json",
  "tokio",

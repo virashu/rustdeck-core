@@ -8,4 +8,4 @@ members = [
   "examples/plugins/sample_plugin",
   "examples/rustdeck-server",
 ]
-default-members = ["crates/rustdeck"]
+default-members = ["crates/rustdeck-core"]

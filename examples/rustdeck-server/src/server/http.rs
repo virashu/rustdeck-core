@@ -12,7 +12,7 @@ use tower_http::{
     trace::TraceLayer,
 };
 
-use rustdeck::{
+use rustdeck_core::{
     buttons::{DeckButtonPos, DeckButtonUpdate, RawDeckButton},
     config::DeckDimensionConfig,
     deck::Deck,

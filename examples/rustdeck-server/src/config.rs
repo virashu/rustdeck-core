@@ -1,6 +1,6 @@
 use std::{fs, path};
 
-use rustdeck::config::DeckConfig;
+use rustdeck_core::config::DeckConfig;
 
 pub mod paths {
     #[cfg(feature = "portable")]

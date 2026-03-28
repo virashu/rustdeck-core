@@ -3,7 +3,7 @@ mod server;
 
 use std::{fs, sync::Arc, thread, time::Duration};
 
-use rustdeck::Deck;
+use rustdeck_core::Deck;
 
 use crate::config::{load_config, paths, save_config};
 
