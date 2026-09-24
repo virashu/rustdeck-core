@@ -76,9 +76,9 @@ pub struct Plugin {
     pub fn_run_action: FnRunAction,
 
     /* Optional */
-    pub fn_get_enum: *const FnGetEnum,
-    pub fn_get_config_value: *const FnGetConfigValue,
-    pub fn_set_config_value: *const FnSetConfigValue,
+    pub fn_get_enum: Option<FnGetEnum>,
+    pub fn_get_config_value: Option<FnGetConfigValue>,
+    pub fn_set_config_value: Option<FnSetConfigValue>,
 }
 
 /* Globals */

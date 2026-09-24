@@ -81,9 +81,9 @@ typedef struct
   Result (*fn_run_action)(void* state, const char* id, const Arg* args);
 
   /* Optional */
-  Result (**fn_get_enum)(void* state, const char* id);
-  Result (**fn_get_config_value)(void* state, const char* id);
-  Result (**fn_set_config_value)(void* state, const char* id, const Arg* value);
+  Result (*fn_get_enum)(void* state, const char* id);
+  Result (*fn_get_config_value)(void* state, const char* id);
+  Result (*fn_set_config_value)(void* state, const char* id, const Arg* value);
 } Plugin;
 
 EXPORT

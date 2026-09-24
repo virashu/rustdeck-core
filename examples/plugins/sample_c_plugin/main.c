@@ -81,6 +81,8 @@ const Plugin somePlugin = {
   .fn_run_action = &run_action,
 
   .fn_get_enum = NULL,
+  .fn_get_config_value = NULL,
+  .fn_set_config_value = NULL,
 };
 // clang-format on
 

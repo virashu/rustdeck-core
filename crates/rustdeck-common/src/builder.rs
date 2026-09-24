@@ -107,9 +107,10 @@ pub struct PluginBuilder {
     fn_get_variable: Option<proto::FnGetVariable>,
     fn_run_action: Option<proto::FnRunAction>,
 
-    fn_get_enum: Option<*const proto::FnGetEnum>,
-    fn_get_config_value: Option<*const proto::FnGetConfigValue>,
-    fn_set_config_value: Option<*const proto::FnSetConfigValue>,
+    // Optional
+    fn_get_enum: Option<proto::FnGetEnum>,
+    fn_get_config_value: Option<proto::FnGetConfigValue>,
+    fn_set_config_value: Option<proto::FnSetConfigValue>,
 }
 
 impl PluginBuilder {
@@ -205,17 +206,17 @@ impl PluginBuilder {
         self
     }
 
-    pub fn get_enum(mut self, f: *const proto::FnGetEnum) -> Self {
+    pub fn get_enum(mut self, f: proto::FnGetEnum) -> Self {
         self.fn_get_enum = Some(f);
         self
     }
 
-    pub fn get_config_value(mut self, f: *const proto::FnGetConfigValue) -> Self {
+    pub fn get_config_value(mut self, f: proto::FnGetConfigValue) -> Self {
         self.fn_get_config_value = Some(f);
         self
     }
 
-    pub fn set_config_value(mut self, f: *const proto::FnSetConfigValue) -> Self {
+    pub fn set_config_value(mut self, f: proto::FnSetConfigValue) -> Self {
         self.fn_set_config_value = Some(f);
         self
     }
@@ -239,10 +240,10 @@ impl PluginBuilder {
         let fn_run_action = self
             .fn_run_action
             .ok_or_else(|| "fn_run_action is not set".to_string())?;
-        let fn_get_enum = self.fn_get_enum.unwrap_or_else(std::ptr::null);
+        let fn_get_enum = self.fn_get_enum;
 
-        let fn_get_config_value = self.fn_get_config_value.unwrap_or_else(std::ptr::null);
-        let fn_set_config_value = self.fn_set_config_value.unwrap_or_else(std::ptr::null);
+        let fn_get_config_value = self.fn_get_config_value;
+        let fn_set_config_value = self.fn_set_config_value;
 
         #[allow(clippy::option_if_let_else)]
         let variables = match self.variables {

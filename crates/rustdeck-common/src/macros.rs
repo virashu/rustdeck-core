@@ -67,10 +67,7 @@ macro_rules! decorate_fn_get_enum {
             $crate::Result::from(($user_fn_get_enum)(state, id))
         }
 
-        ::std::boxed::Box::into_raw(::std::boxed::Box::new(
-            _get_enum as $crate::proto::FnGetEnum,
-        ))
-        .cast_const()
+        _get_enum
     }};
 }
 
@@ -86,10 +83,7 @@ macro_rules! decorate_fn_get_config_value {
             $crate::Result::from(($user_fn_get_config_value)(state, id))
         }
 
-        ::std::boxed::Box::into_raw(::std::boxed::Box::new(
-            _get_config_value as $crate::proto::FnGetConfigValue,
-        ))
-        .cast_const()
+        _get_config_value
     }};
 }
 
@@ -107,10 +101,7 @@ macro_rules! decorate_fn_set_config_value {
             $crate::Result::from(($user_fn_set_config_value)(state, id, &value))
         }
 
-        ::std::boxed::Box::into_raw(::std::boxed::Box::new(
-            _set_config_value as $crate::proto::FnSetConfigValue,
-        ))
-        .cast_const()
+        _set_config_value
     }};
 }
 
