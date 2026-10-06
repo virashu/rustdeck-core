@@ -1,7 +1,10 @@
-**/target/
-.idea/
 **/.vscode/
+**/target/
+
+.idea/
 dist/
+
+/.direnv/
 
 # Runtime
 /plugins/
