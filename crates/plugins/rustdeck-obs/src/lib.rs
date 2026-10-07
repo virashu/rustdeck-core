@@ -205,7 +205,7 @@ fn run_action(
             let input = args.get(0).string().to_owned();
             let input_state = args.get(1).string().to_owned();
 
-            match args.get(1).string() {
+            match input_state.as_str() {
                 "toggle" => {
                     state
                         .rt

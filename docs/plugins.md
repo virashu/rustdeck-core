@@ -61,3 +61,16 @@ decl_plugin! {
   fn_run_action: /* fn(state: &mut T, id: &str, args: &Args) -> Result<(), impl ToString> */
 }
 ```
+
+## Plugin bundles
+
+As plugins are platform-specific binaries,
+it would be good to have plugin bundles to ship multiple platforms
+together
+
+```
+my_plugin.deckplugin-bundle
+|-- my_plugin.amd64-windows.deckplugin
+|-- my_plugin.amd64-linux.deckplugin
+\-- my_plugin.arm64-darwin.deckplugin
+```
